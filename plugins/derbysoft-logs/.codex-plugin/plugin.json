@@ -1,6 +1,6 @@
 {
   "name": "derbysoft-logs",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "DerbySoft business log investigation: PerfLog events, StreamLog payloads, Loki application console logs and request correlation.",
   "author": {"name": "DerbySoft"},
   "license": "Proprietary",

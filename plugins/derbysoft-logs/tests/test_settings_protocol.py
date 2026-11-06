@@ -44,10 +44,12 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
         result = await session.call_tool("settings_read", {})
         assert not result.is_error
         initial = result.structured_content
+        assert [key for key in initial["schema"]["properties"] if key.startswith("new_environment_")] == ["new_environment_id"]
+        assert initial["schema"]["properties"]["new_environment_id"]["title"] == "环境名称"
         assert initial["values"]["default_environment"] == settings.NO_DEFAULT
         assert initial["schema"]["properties"]["default_environment"]["enum"] == [settings.NO_DEFAULT]
         update = await session.call_tool("settings_update", {"set": {
-            "new_environment_id": "uat", "new_environment_label": "UAT", "new_environment_kind": "uat"
+            "new_environment_id": "uat"
         }})
         assert not update.is_error
         created = await session.call_tool("create_environment", {})
@@ -56,6 +58,9 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
         assert {"configure_credentials__uat", "test_connection__uat"} <= changed_tools
         read = (await session.call_tool("settings_read", {})).structured_content
         assert read["schema"]["properties"]["default_environment"]["enum"] == [settings.NO_DEFAULT, "uat"]
+        assert any(group["title"] == "uat" for group in read["layout"])
+        assert field("uat", "label") not in read["schema"]["properties"]
+        assert field("uat", "kind") not in read["schema"]["properties"]
         values = {"default_environment": "uat", field("uat", "opensearch", "url"): "https://search.example.test",
                   field("uat", "opensearch", "username"): "reader",
                   field("uat", "opensearch", "default_index"): "derbysoft-exchange-*"}
@@ -96,7 +101,7 @@ async def test_manual_setup_never_copies_unselected_profile(isolated):
         assert "default" not in page["schema"]["properties"]["default_environment"]["enum"]
         assert all("migrat" not in tool.name for tool in (await session.list_tools()).tools)
         assert "迁移" not in json.dumps(page, ensure_ascii=False)
-        await session.call_tool("settings_update", {"set": {"new_environment_id": "uat", "new_environment_kind": "uat"}})
+        await session.call_tool("settings_update", {"set": {"new_environment_id": "uat"}})
         created = await session.call_tool("create_environment", {})
         assert not created.is_error and created.structured_content == {"environment": "uat", "created": True}
         assert config.load_profile("uat")["opensearch"] == {}
@@ -152,7 +157,7 @@ async def test_stdio_negotiates_native_settings_before_configuration(isolated):
         assert {"settings_read", "settings_update", "create_environment", "open_log_settings"} <= tools
         result = await session.call_tool("settings_read", {})
         assert result.structured_content["values"]["default_environment"] == settings.NO_DEFAULT
-        await session.call_tool("settings_update", {"set": {"new_environment_id": "uat", "new_environment_kind": "uat"}})
+        await session.call_tool("settings_update", {"set": {"new_environment_id": "uat"}})
         assert not (await session.call_tool("create_environment", {})).is_error
         refreshed = {tool.name for tool in (await session.list_tools()).tools}
         assert "configure_credentials__uat" in refreshed

@@ -292,9 +292,9 @@
         const group = environmentGroups.find(item => item.id === selectedEnvironment).group;
         const prefix = `env__${selectedEnvironment}__`;
         const serviceCard = document.createElement("section"); serviceCard.className = "card";
-        for (const [kind, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"], ["identity", "环境信息"]]) {
+        for (const [kind, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"]]) {
           const keys = group.items.filter(item => item.kind === "property" && typeof item.property === "string" && item.property.startsWith(prefix) &&
-            (kind === "identity" ? ["label", "kind"].includes(item.property.slice(prefix.length)) : item.property.startsWith(prefix + kind + "__")))
+            item.property.startsWith(prefix + kind + "__"))
             .map(item => item.property).filter(key => definitions[key]);
           if (!keys.length) continue;
           const details = document.createElement("details"); details.className = "service"; details.open = expandedServices.has(kind);
@@ -375,7 +375,7 @@
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.2"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.3"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
         await readSettings();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }

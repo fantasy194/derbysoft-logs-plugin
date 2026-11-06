@@ -6,7 +6,7 @@
 
 需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
 
-推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.4.2** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.4.3** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
 
 CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
 
@@ -16,7 +16,7 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 
 备用页面的 **编辑环境** 仅选择当前显示的配置；**默认环境** 决定未指定环境的查询。切换编辑环境会保留未保存的输入，不会修改默认选择。
 
-1. 在 **新增环境** 填写环境 ID、显示名称和类型，再点击 **创建环境**。例如 ID `uat`、显示名 `UAT`、类型 `uat`。可分别创建生产环境和其他环境；新 ID 不能叫 `default`。
+1. 在 **新增环境** 填写一个 **环境名称**，例如 `uat` 或 `prod`，再点击 **创建环境**。此名称同时用于显示和查询，无需另设显示名称或类型。支持字母、数字、下划线和连字符；不能使用 `default`。
 2. 在环境分组中，按需要填写 OpenSearch 地址、用户名和默认索引，StreamLog 地址，以及 Loki 地址、用户名、认证类型、可选租户 ID 和服务标签。各服务独立配置；只填写实际需要的服务。服务地址需要使用 HTTPS。
 3. 点击该环境的 **配置凭证**，在本机打开的受控页面输入服务密码或 token。OpenSearch 使用用户名/密码，StreamLog 使用独立 Authorization，Loki 支持 Basic、Bearer 和无认证；Bearer token 作为 Loki 凭证填写。密码不在结构化设置、聊天或 MCP 工具参数中传递。
 4. 在顶部 **默认环境** 选择一个已有环境，或保留未设置。点击对应环境的 **测试连接**；再用已知索引、时间范围或 client 做受限的只读查询，确认实际权限。

@@ -10,9 +10,8 @@ from typing import Any
 
 from . import config
 
-KINDS = ["dev", "qa", "uat", "prod", "custom"]
 NO_DEFAULT = "不设置（查询时询问）"
-_DRAFT_DEFAULTS = {"new_environment_id": "", "new_environment_label": "", "new_environment_kind": "custom"}
+_DRAFT_DEFAULTS = {"new_environment_id": ""}
 _draft = dict(_DRAFT_DEFAULTS)
 _lock = RLock()
 
@@ -43,8 +42,6 @@ def _fields(details: dict[str, Any]) -> dict[str, tuple[str, ...]]:
     fields: dict[str, tuple[str, ...]] = {}
     for environment in details["environments"]:
         name = environment["id"]
-        for field in ("label", "kind"):
-            fields[environment_field(name, field)] = (name, field)
         for service, entries in SERVICE_FIELDS.items():
             for field, _ in entries:
                 fields[environment_field(name, service, field)] = (name, service, field)
@@ -65,10 +62,8 @@ def read() -> dict[str, Any]:
                 "type": "string", "title": "默认环境", "enum": [NO_DEFAULT] + names,
                 "description": "未设置时，查询前须选择环境。",
             },
-            "new_environment_id": {"type": "string", "title": "新环境 ID", "maxLength": 64,
+            "new_environment_id": {"type": "string", "title": "环境名称", "maxLength": 64,
                                    "description": "例如 uat 或 prod；不能使用 default。"},
-            "new_environment_label": {"type": "string", "title": "显示名称", "maxLength": 128},
-            "new_environment_kind": {"type": "string", "title": "环境类型", "enum": KINDS},
         }
         values: dict[str, Any] = {"default_environment": selected, **_draft}
         layout: list[dict[str, Any]] = [{"kind": "group", "title": "环境选择", "items": [
@@ -86,13 +81,6 @@ def read() -> dict[str, Any]:
         for env in details["environments"]:
             name = env["id"]
             items: list[dict[str, str]] = []
-            for field, title in (("label", "显示名称"), ("kind", "环境类型")):
-                key = environment_field(name, field)
-                props[key] = {"type": "string", "title": title}
-                if field == "kind":
-                    props[key]["enum"] = KINDS
-                values[key] = env[field]
-                items.append({"kind": "property", "property": key})
             for service, entries in SERVICE_FIELDS.items():
                 for field, title in entries:
                     key = environment_field(name, service, field)
@@ -122,7 +110,7 @@ def read() -> dict[str, Any]:
                 {"kind": "tool", "tool": credential_tool(name), "description": "凭证状态：" + status},
                 {"kind": "tool", "tool": test_tool(name)},
             ])
-            layout.append({"kind": "group", "title": f"{env['label'] or name}（{name}）", "items": items})
+            layout.append({"kind": "group", "title": name, "items": items})
         return {"schema": {"type": "object", "properties": props}, "values": values, "layout": layout}
 
 
@@ -156,10 +144,7 @@ def update(changes: dict[str, Any]) -> dict[str, Any]:
             else:
                 path = fields[key]
                 patch = grouped.setdefault(path[0], {})
-                if len(path) == 2:
-                    patch[path[1]] = value
-                else:
-                    patch.setdefault(path[1], {})[path[2]] = value
+                patch.setdefault(path[1], {})[path[2]] = value
         # Validation must complete for every environment before the first write.
         # The cross-process lock prevents another local settings server from
         # changing profiles between the validation and the writes.
@@ -182,8 +167,6 @@ def update(changes: dict[str, Any]) -> dict[str, Any]:
 
 def create() -> dict[str, Any]:
     with _lock:
-        identifier, label, kind = (_draft["new_environment_id"], _draft["new_environment_label"],
-                                   _draft["new_environment_kind"])
-        result = config.create_environment(identifier, label=label, kind=kind)
+        result = config.create_environment(_draft["new_environment_id"])
         _draft.update(_DRAFT_DEFAULTS)
         return {"environment": result["id"], "created": True}

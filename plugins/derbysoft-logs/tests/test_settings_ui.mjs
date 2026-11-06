@@ -16,21 +16,18 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
 <script>
   const calls = window.calls = [];
   window.failNextUpdate = false;
-  const values = {default_environment:'uat',new_environment_id:'',new_environment_label:'',new_environment_kind:'custom'};
+  const values = {default_environment:'uat',new_environment_id:''};
   const props = {
     default_environment:{type:'string',title:'默认环境',enum:['不设置（查询时询问）','uat','prod']},
-    new_environment_id:{type:'string',title:'新环境 ID'},
-    new_environment_label:{type:'string',title:'显示名称'},
-    new_environment_kind:{type:'string',title:'环境类型',enum:['dev','qa','uat','prod','custom']}
+    new_environment_id:{type:'string',title:'环境名称'}
   };
   const layout = [
     {kind:'group',title:'环境选择',items:[{kind:'property',property:'default_environment'},{kind:'tool',tool:'open_log_settings'}]},
-    {kind:'group',title:'新增环境',items:[{kind:'property',property:'new_environment_id'},{kind:'property',property:'new_environment_label'},{kind:'property',property:'new_environment_kind'},{kind:'tool',tool:'create_environment'}]}
+    {kind:'group',title:'新增环境',items:[{kind:'property',property:'new_environment_id'},{kind:'tool',tool:'create_environment'}]}
   ];
-  function addEnvironment(id,label) {
+  function addEnvironment(id) {
     const prefix='env__'+id+'__', items=[];
-    const fields=[['label','显示名称',label],['kind','环境类型',id==='uat'?'uat':'prod'],
-      ['opensearch__url','OpenSearch 地址','https://'+id+'.example.test'],
+    const fields=[['opensearch__url','OpenSearch 地址','https://'+id+'.example.test'],
       ['opensearch__username','OpenSearch 用户名','reader'],
       ['opensearch__default_index','OpenSearch 默认业务索引','logs-'+id+'-*'],
       ['streamlog__url','StreamLog 地址','https://stream.example.test'],
@@ -39,15 +36,14 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
       ['loki__tenant_id','Loki 租户 ID',''],['loki__service_label','Loki 应用标签','app']];
     for(const [key,title,value] of fields){
       const name=prefix+key; props[name]={type:'string',title}; values[name]=value;
-      if(key==='kind')props[name].enum=['dev','qa','uat','prod','custom'];
       if(key==='loki__auth_type')props[name].enum=['basic','bearer','none'];
       items.push({kind:'property',property:name});
     }
     items.push({kind:'tool',tool:'configure_credentials__'+id,description:'凭证状态：已保存'},
                {kind:'tool',tool:'test_connection__'+id});
-    layout.push({kind:'group',title:label+'（'+id+'）',items});
+    layout.push({kind:'group',title:id,items});
   }
-  addEnvironment('uat','测试环境');addEnvironment('prod','生产环境');
+  addEnvironment('uat');addEnvironment('prod');
   const read = () => ({schema:{type:'object',properties:props},values:{...values},layout});
   const reply = (event,id,result) => event.source.postMessage({jsonrpc:'2.0',id,result},'*');
   window.addEventListener('message', async event => {
@@ -63,8 +59,8 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
       out={values:{...values}};
     } else if(name==='create_environment'){
       const id=values.new_environment_id;if(!id){reply(event,msg.id,{isError:true,content:[{type:'text',text:'请输入环境 ID'}]});return;}
-      addEnvironment(id,values.new_environment_label||id);props.default_environment.enum.push(id);
-      values.new_environment_id='';values.new_environment_label='';values.new_environment_kind='custom';out={environment:id,created:true};
+      addEnvironment(id);props.default_environment.enum.push(id);
+      values.new_environment_id='';out={environment:id,created:true};
     } else if(name.startsWith('configure_credentials__'))out={opened:true,environment:name.slice('configure_credentials__'.length)};
     else if(name.startsWith('test_connection__'))out={environment:name.slice('test_connection__'.length),opensearch:{configured:true}};
     else {reply(event,msg.id,{isError:true,content:[{type:'text',text:'unknown action'}]});return;}
@@ -131,8 +127,11 @@ try {
   assert.equal(await frame.getByRole('button',{name:'保存更改'}).isEnabled(),true)
 
   await frame.getByRole('button',{name:'新增',exact:true}).click()
-  await frame.getByLabel('新环境 ID').fill('qa')
-  await frame.getByLabel('显示名称').fill('QA')
+  assert.equal(await frame.getByRole('heading',{name:'新增环境',exact:true}).locator('..').locator('..').locator('input,select').count(),1)
+  if(process.env.UI_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.UI_SCREENSHOT_DIR,'settings-create-410-light.png')})
+  await frame.getByLabel('环境名称').fill('qa')
+  assert.equal(await frame.getByLabel('显示名称').count(),0)
+  assert.equal(await frame.getByLabel('环境类型').count(),0)
   await frame.getByRole('button',{name:'新增环境'}).click()
   await frame.getByText('已创建环境 qa。').waitFor()
   assert.equal(await frame.getByLabel('编辑环境').inputValue(),'qa')
@@ -180,7 +179,7 @@ try {
     }else await route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:credentialsHtml})
   })
   await credentialPage.goto('http://credential.test/#fixture-token')
-  await credentialPage.getByText('测试环境（uat）').waitFor()
+  await credentialPage.getByText('uat',{exact:true}).waitFor()
   assert.equal(new URL(credentialPage.url()).hash,'')
   assert.ok(await credentialPage.getByText('无需认证').isVisible())
   assert.equal(await credentialPage.locator('input[type=password]').count(),2)
