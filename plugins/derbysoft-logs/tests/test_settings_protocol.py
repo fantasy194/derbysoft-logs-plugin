@@ -92,6 +92,118 @@ async def test_env_actions_remain_bound_to_id_not_changing_default(isolated, mon
 
 
 @pytest.mark.asyncio
+async def test_delete_requires_confirmation_and_cleans_default_and_actions(isolated, monkeypatch):
+    config.create_environment("uat", kind="uat")
+    config.create_environment("prod", kind="prod")
+    config.set_default_environment("uat")
+    original_delete = config.delete_environment
+    attempted = []
+
+    def track_delete(environment):
+        attempted.append(environment)
+        return original_delete(environment)
+
+    monkeypatch.setattr(config, "delete_environment", track_delete)
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        state = (await session.call_tool("settings_read", {})).structured_content
+        group = next(group for group in state["layout"] if group["title"] == "uat")
+        assert any(item.get("tool") == "request_delete__uat" for item in group["items"])
+        tools = {tool.name: tool for tool in (await session.list_tools()).tools}
+        preview = tools["request_delete__uat"]
+        assert preview.annotations.read_only_hint and not preview.annotations.destructive_hint
+        assert preview.input_schema.get("properties", {}) == {}
+        assert preview.meta["ui"] == {"resourceUri": settings_server.URI, "visibility": ["app"]}
+        destructive = tools["delete_environment"]
+        assert destructive.annotations.destructive_hint and not destructive.annotations.read_only_hint
+        assert not destructive.annotations.idempotent_hint
+        assert destructive.meta["ui"]["visibility"] == ["app"]
+
+        preview_result = await session.call_tool("request_delete__uat", {})
+        assert preview_result.structured_content == {"action": "confirm_delete", "environment": "uat", "default_environment": True}
+        config.set_default_environment("prod")
+        preview_after_default_change = await session.call_tool("request_delete__uat", {})
+        assert preview_after_default_change.structured_content == {"action": "confirm_delete", "environment": "uat", "default_environment": False}
+        assert not attempted
+        mismatch = await session.call_tool("delete_environment", {"environment": "uat", "confirmation": "prod"})
+        assert mismatch.is_error and not attempted
+        assert (isolated / "uat.json").is_file()
+
+        # Deleting a default environment clears the default, not the other profile.
+        config.set_default_environment("uat")
+        deleted = await session.call_tool("delete_environment", {"environment": "uat", "confirmation": "uat"})
+        assert not deleted.is_error
+        assert deleted.structured_content == {"environment": "uat", "deleted": True, "default_cleared": True}
+        assert attempted == ["uat"]
+        assert not (isolated / "uat.json").exists() and (isolated / "prod.json").exists()
+        refreshed = (await session.call_tool("settings_read", {})).structured_content
+        assert refreshed["values"]["default_environment"] == settings.NO_DEFAULT
+        assert "uat" not in refreshed["schema"]["properties"]["default_environment"]["enum"]
+        assert all(group["title"] != "uat" for group in refreshed["layout"])
+        remaining = {tool.name for tool in (await session.list_tools()).tools}
+        assert not {"configure_credentials__uat", "test_connection__uat", "request_delete__uat"} & remaining
+        assert {"configure_credentials__prod", "test_connection__prod", "request_delete__prod"} <= remaining
+
+
+@pytest.mark.asyncio
+async def test_failed_delete_preserves_action_tools(isolated, monkeypatch):
+    config.create_environment("retained", kind="custom")
+
+    def fail_delete(environment):
+        raise config.ConfigurationError("无法删除，原配置已保留。")
+
+    monkeypatch.setattr(config, "delete_environment", fail_delete)
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        await session.call_tool("settings_read", {})
+        result = await session.call_tool("delete_environment", {"environment": "retained", "confirmation": "retained"})
+        assert result.is_error
+        names = {tool.name for tool in (await session.list_tools()).tools}
+        assert {"configure_credentials__retained", "test_connection__retained", "request_delete__retained"} <= names
+        assert (isolated / "retained.json").is_file()
+
+
+@pytest.mark.asyncio
+async def test_external_deletion_drops_stale_actions_on_next_settings_read(isolated):
+    config.create_environment("externally_deleted")
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        await session.call_tool("settings_read", {})
+        assert "request_delete__externally_deleted" in {tool.name for tool in (await session.list_tools()).tools}
+        config.delete_environment("externally_deleted")
+        await session.call_tool("settings_read", {})
+        names = {tool.name for tool in (await session.list_tools()).tools}
+        assert not {"configure_credentials__externally_deleted", "test_connection__externally_deleted",
+                    "request_delete__externally_deleted"} & names
+
+
+@pytest.mark.asyncio
+async def test_virtual_environment_has_no_delete_action(isolated, monkeypatch):
+    monkeypatch.setenv("DERBYSOFT_LOGS_PROFILE", "virtual_only")
+    monkeypatch.setenv("STREAMLOG_URL", "https://virtual.example.test")
+    monkeypatch.setenv("STREAMLOG_AUTHORIZATION", "fixture-secret")
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        state = (await session.call_tool("settings_read", {})).structured_content
+        group = next(group for group in state["layout"] if group["title"] == "virtual_only")
+        assert all(item.get("tool") != "request_delete__virtual_only" for item in group["items"])
+        names = {tool.name for tool in (await session.list_tools()).tools}
+        assert "request_delete__virtual_only" not in names
+        result = await session.call_tool("delete_environment", {"environment": "virtual_only", "confirmation": "virtual_only"})
+        assert result.is_error and "fixture-secret" not in str(result.content)
+
+
+@pytest.mark.asyncio
+async def test_preview_warns_when_persisted_default_is_overridden(isolated, monkeypatch):
+    config.create_environment("uat", kind="uat")
+    config.create_environment("prod", kind="prod")
+    config.set_default_environment("uat")
+    monkeypatch.setenv("DERBYSOFT_LOGS_PROFILE", "prod")
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        await session.call_tool("settings_read", {})
+        preview = await session.call_tool("request_delete__uat", {})
+        assert preview.structured_content == {"action": "confirm_delete", "environment": "uat", "default_environment": True}
+        deleted = await session.call_tool("delete_environment", {"environment": "uat", "confirmation": "uat"})
+        assert not deleted.is_error and deleted.structured_content["default_cleared"] is True
+
+
+@pytest.mark.asyncio
 async def test_manual_setup_never_copies_unselected_profile(isolated):
     old = {"opensearch": {"url": "https://old.example.test", "username": "reader", "credential_store": True}}
     (isolated / "default.json").write_text(json.dumps(old), encoding="utf-8")

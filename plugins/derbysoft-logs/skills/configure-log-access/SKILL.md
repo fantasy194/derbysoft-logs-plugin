@@ -15,4 +15,6 @@ Use the plugin's Structured Settings in its details page as the primary configur
 
 Configuration is read at the next MCP call. Updating the installed plugin itself may require refreshing the plugin connection or starting a new conversation. If native settings do not appear, use `open_log_settings`; if the tools are unavailable, diagnose the installation rather than creating custom MCP clients or query scripts. Plain service environment variables cannot silently override an explicitly selected saved environment. Explain any effective `DERBYSOFT_LOGS_PROFILE` override.
 
+For an explicit request to remove an environment, direct the user to its **删除环境** action and the name-confirmation dialog. Deleting the default clears the default selection; it never selects another environment. Do not delete an environment as a repair or setup shortcut.
+
 Never disable TLS, change VPN settings, publish business logs, or write to a log cluster as a setup workaround. Explain errors without echoing credentials.

@@ -51,6 +51,7 @@
   "tests/test_settings_ui.mjs",
   "tests/test_credential_portal.py",
   "tests/test_doctor_index.py",
+  "tests/test_delete_environment.py",
   "tests/test_loki.py",
   "tests/test_loki_config.py",
   "tests/test_loki_routing.py",

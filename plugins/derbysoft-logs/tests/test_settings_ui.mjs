@@ -16,6 +16,8 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
 <script>
   const calls = window.calls = [];
   window.failNextUpdate = false;
+  window.failNextDelete = false;
+  window.failNextRead = false;
   const values = {default_environment:'uat',new_environment_id:''};
   const props = {
     default_environment:{type:'string',title:'默认环境',enum:['不设置（查询时询问）','uat','prod']},
@@ -40,7 +42,7 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
       items.push({kind:'property',property:name});
     }
     items.push({kind:'tool',tool:'configure_credentials__'+id,description:'凭证状态：已保存'},
-               {kind:'tool',tool:'test_connection__'+id});
+               {kind:'tool',tool:'test_connection__'+id},{kind:'tool',tool:'request_delete__'+id});
     layout.push({kind:'group',title:id,items});
   }
   addEnvironment('uat');addEnvironment('prod');
@@ -49,10 +51,17 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
   window.addEventListener('message', async event => {
     if(event.source !== document.querySelector('iframe').contentWindow || !event.data || event.data.jsonrpc !== '2.0')return;
     const msg=event.data;
-    if(msg.method==='ui/initialize'){calls.push({method:msg.method});reply(event,msg.id,{protocolVersion:'2026-01-26',hostInfo:{name:'test-host',version:'1'},hostCapabilities:{},hostContext:{theme:'light'}});return;}
+    if(msg.method==='ui/initialize'){
+      calls.push({method:msg.method});
+      if(new URL(location.href).searchParams.has('early'))event.source.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-result',params:{content:[],structuredContent:{action:'confirm_delete',environment:'prod',default_environment:false}}},'*');
+      reply(event,msg.id,{protocolVersion:'2026-01-26',hostInfo:{name:'test-host',version:'1'},hostCapabilities:{},hostContext:{theme:'light'}});return;
+    }
     if(msg.method!=='tools/call')return;
     const name=msg.params.name,args=msg.params.arguments;calls.push({method:msg.method,name,args});let out;
-    if(name==='settings_read')out=read();
+    if(name==='settings_read'){
+      if(window.failNextRead){window.failNextRead=false;reply(event,msg.id,{isError:true,content:[{type:'text',text:'fixture: 刷新失败'}]});return;}
+      out=read();
+    }
     else if(name==='settings_update'){
       if(window.failNextUpdate){window.failNextUpdate=false;reply(event,msg.id,{isError:true,content:[{type:'text',text:'fixture: 保存失败'}]});return;}
       for(const [key,value] of Object.entries(args.set))values[key]=key.endsWith('__url')?value.replace(/\\/+$/,''):value;
@@ -63,6 +72,20 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
       values.new_environment_id='';out={environment:id,created:true};
     } else if(name.startsWith('configure_credentials__'))out={opened:true,environment:name.slice('configure_credentials__'.length)};
     else if(name.startsWith('test_connection__'))out={environment:name.slice('test_connection__'.length),opensearch:{configured:true}};
+    else if(name.startsWith('request_delete__')){
+      const environment=name.slice('request_delete__'.length);
+      out={action:'confirm_delete',environment,default_environment:values.default_environment===environment};
+    }else if(name==='delete_environment'){
+      if(window.failNextDelete){window.failNextDelete=false;reply(event,msg.id,{isError:true,content:[{type:'text',text:'fixture: 删除失败'}]});return;}
+      if(args.confirmation!==args.environment){reply(event,msg.id,{isError:true,content:[{type:'text',text:'名称不匹配'}]});return;}
+      const index=layout.findIndex(group=>(group.items||[]).some(item=>item.tool==='request_delete__'+args.environment));
+      if(index<0){reply(event,msg.id,{isError:true,content:[{type:'text',text:'环境不存在'}]});return;}
+      for(const item of layout[index].items)if(item.kind==='property'){delete props[item.property];delete values[item.property];}
+      layout.splice(index,1);props.default_environment.enum=props.default_environment.enum.filter(x=>x!==args.environment);
+      const defaultCleared=values.default_environment===args.environment;
+      if(defaultCleared)values.default_environment='不设置（查询时询问）';
+      out={environment:args.environment,deleted:true,default_cleared:defaultCleared};
+    }
     else {reply(event,msg.id,{isError:true,content:[{type:'text',text:'unknown action'}]});return;}
     reply(event,msg.id,{content:[],structuredContent:out});
   });
@@ -129,7 +152,7 @@ try {
   await frame.getByRole('button',{name:'新增',exact:true}).click()
   assert.equal(await frame.getByRole('heading',{name:'新增环境',exact:true}).locator('..').locator('..').locator('input,select').count(),1)
   if(process.env.UI_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.UI_SCREENSHOT_DIR,'settings-create-410-light.png')})
-  await frame.getByLabel('环境名称').fill('qa')
+  await frame.getByLabel('环境名称',{exact:true}).fill('qa')
   assert.equal(await frame.getByLabel('显示名称').count(),0)
   assert.equal(await frame.getByLabel('环境类型').count(),0)
   await frame.getByRole('button',{name:'新增环境'}).click()
@@ -147,6 +170,66 @@ try {
   await frame.getByText('已保存',{exact:true}).waitFor()
   assert.equal(await frame.locator('#field-env__uat__opensearch__url').inputValue(),'https://uat.example.test')
 
+  // Delete a default environment without committing its draft or another environment's draft.
+  await frame.getByLabel('默认业务索引').fill('draft-uat-*')
+  await frame.getByLabel('编辑环境').selectOption('prod')
+  await frame.getByLabel('默认业务索引').fill('draft-prod-*')
+  await frame.getByLabel('编辑环境').selectOption('uat')
+  let beforeDelete=(await page.evaluate(()=>window.calls)).length
+  await frame.getByRole('button',{name:'删除',exact:true}).click()
+  const dialog=frame.getByRole('dialog',{name:'删除环境'})
+  await dialog.waitFor()
+  assert.ok(await dialog.getByText('这是默认环境，删除后会清空默认环境。').isVisible())
+  assert.ok(await dialog.getByText('uat',{exact:true}).isVisible())
+  assert.deepEqual((await page.evaluate(()=>window.calls)).slice(beforeDelete).map(call=>call.name),['request_delete__uat'])
+  if(process.env.UI_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.UI_SCREENSHOT_DIR,'settings-delete-410-light.png')})
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params:{theme:'dark'}},'*'))
+  await frame.locator('html[data-theme="dark"]').waitFor()
+  if(process.env.UI_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.UI_SCREENSHOT_DIR,'settings-delete-410-dark.png')})
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/host-context-changed',params:{theme:'light'}},'*'))
+  await dialog.getByRole('button',{name:'取消'}).click()
+  assert.equal((await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').length,0)
+  assert.equal(await frame.getByLabel('默认业务索引').inputValue(),'draft-uat-*')
+
+  await frame.getByRole('button',{name:'删除',exact:true}).click()
+  await dialog.getByLabel('输入环境名称确认').fill('UAT')
+  assert.equal(await dialog.getByRole('button',{name:'删除环境'}).isDisabled(),true)
+  assert.equal((await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').length,0)
+  await dialog.getByLabel('输入环境名称确认').fill('uat')
+  await page.evaluate(()=>{window.failNextDelete=true})
+  await dialog.getByRole('button',{name:'删除环境'}).click()
+  await dialog.getByText('fixture: 删除失败',{exact:false}).waitFor()
+  assert.equal(await dialog.getByLabel('输入环境名称确认').inputValue(),'uat')
+  assert.equal(await dialog.getByRole('button',{name:'删除环境'}).isEnabled(),true)
+  await dialog.getByRole('button',{name:'删除环境'}).click()
+  await frame.getByText('已删除环境 uat。').waitFor()
+  assert.equal(await frame.getByLabel('默认环境').inputValue(),'不设置（查询时询问）')
+  assert.equal(await frame.getByLabel('编辑环境').inputValue(),'prod')
+  assert.equal(await frame.getByLabel('默认业务索引').inputValue(),'draft-prod-*')
+  assert.equal(await frame.getByRole('button',{name:'保存更改'}).isEnabled(),true)
+  assert.equal(await frame.getByLabel('编辑环境').locator('option[value="uat"]').count(),0)
+  const deletedUat=(await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').at(-1)
+  assert.deepEqual(deletedUat.args,{environment:'uat',confirmation:'uat'})
+
+  // A native action can target another environment; it must not save the visible draft.
+  await frame.getByLabel('默认环境').selectOption('qa')
+  beforeDelete=(await page.evaluate(()=>window.calls)).length
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-result',params:{content:[],structuredContent:{action:'confirm_delete',environment:'qa',default_environment:false}}},'*'))
+  await dialog.waitFor()
+  assert.ok(await dialog.getByText('qa',{exact:true}).isVisible())
+  assert.equal(await dialog.getByText('这是默认环境，删除后会清空默认环境。').count(),0)
+  assert.ok(await dialog.getByText('未保存的默认环境选择也会清除。').isVisible())
+  await dialog.getByLabel('输入环境名称确认').fill('qa')
+  await dialog.getByRole('button',{name:'删除环境'}).click()
+  await frame.getByText('已删除环境 qa。').waitFor()
+  assert.equal(await frame.getByLabel('编辑环境').inputValue(),'prod')
+  assert.equal(await frame.getByLabel('默认环境').inputValue(),'不设置（查询时询问）')
+  assert.equal(await frame.getByLabel('默认业务索引').inputValue(),'draft-prod-*')
+  const afterNative=(await page.evaluate(()=>window.calls)).slice(beforeDelete)
+  assert.deepEqual(afterNative.map(call=>call.name),['delete_environment','settings_read'])
+  assert.deepEqual(afterNative[0].args,{environment:'qa',confirmation:'qa'})
+  assert.equal(await frame.getByLabel('编辑环境').locator('option[value="qa"]').count(),0)
+
   await page.setViewportSize({width:375,height:780})
   let dimensions=await frame.locator('html').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}))
   assert.ok(dimensions.scroll<=dimensions.client+1,JSON.stringify(dimensions))
@@ -160,6 +243,36 @@ try {
   dimensions=await frame.locator('html').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}))
   assert.ok(dimensions.scroll<=dimensions.client+1,JSON.stringify(dimensions))
   assert.deepEqual(browserErrors,[])
+  // Native host can notify the app before ui/initialize or settings_read completes.
+  await page.goto('http://fixture.test/?early=1')
+  const early=page.frameLocator('iframe').getByRole('dialog',{name:'删除环境'})
+  await early.waitFor()
+  assert.ok(await early.getByText('prod',{exact:true}).isVisible())
+  await early.getByRole('button',{name:'取消'}).click()
+  assert.equal((await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').length,0)
+  await page.frameLocator('iframe').locator('html').evaluate(()=>window.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-result',params:{structuredContent:{action:'confirm_delete',environment:'uat',default_environment:true}}},'*'))
+  await page.waitForTimeout(100)
+  assert.equal(await early.isVisible(),false)
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-result',params:{structuredContent:{action:'confirm_delete',environment:'../bad',default_environment:'true'}}},'*'))
+  await page.waitForTimeout(100)
+  assert.equal(await early.isVisible(),false)
+  // If deletion succeeded but refresh failed, never resend deletion and retain other drafts.
+  const earlyFrame=page.frameLocator('iframe')
+  await earlyFrame.getByLabel('编辑环境').selectOption('prod')
+  await earlyFrame.getByLabel('默认业务索引').fill('retained-after-refresh-*')
+  await earlyFrame.getByLabel('编辑环境').selectOption('uat')
+  await earlyFrame.getByRole('button',{name:'删除',exact:true}).click()
+  await early.waitFor()
+  await early.getByLabel('输入环境名称确认').fill('uat')
+  await page.evaluate(()=>{window.failNextRead=true})
+  await early.getByRole('button',{name:'删除环境'}).click()
+  await earlyFrame.getByText('环境 uat 已删除，但刷新失败；请刷新设置。').waitFor()
+  assert.equal(await earlyFrame.getByRole('button',{name:'保存更改'}).isDisabled(),true)
+  await earlyFrame.getByRole('button',{name:'刷新'}).click()
+  await earlyFrame.getByLabel('编辑环境').waitFor()
+  assert.equal(await earlyFrame.getByLabel('编辑环境').inputValue(),'prod')
+  assert.equal(await earlyFrame.getByLabel('默认业务索引').inputValue(),'retained-after-refresh-*')
+  assert.equal((await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').length,1)
   const credentialPage=await browser.newPage({viewport:{width:410,height:780},colorScheme:'light'})
   const credentialRequests=[]
   const credentialErrors=[]
@@ -197,6 +310,6 @@ try {
   assert.ok(credentialWidth.scroll<=credentialWidth.client+1,JSON.stringify(credentialWidth))
   assert.deepEqual(credentialErrors,[])
   await credentialPage.close()
-  console.log('MCP App UI passed: multi-environment editing, default isolation, dirty retention, scoped action, creation, light/dark/narrow layout')
+  console.log('MCP App UI passed: multi-environment editing, native/early deletion, cancellation, exact confirmation, retry, default clearing, unrelated drafts, light/dark/narrow layout')
   console.log('Credential UI passed: environment identity, no-auth mode, secret save and clearing, URL fragment removal, light/dark/narrow layout')
 }finally{await browser.close()}

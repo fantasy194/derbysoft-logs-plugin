@@ -19,7 +19,8 @@ URI = "ui://derbysoft-logs/settings.html"
 HIDDEN = {"ui": {"visibility": ["app"]}}
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
-mcp = MCPServer("DerbySoft Logs Settings", version="0.4.3")
+DELETE = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False, open_world_hint=False)
+mcp = MCPServer("DerbySoft Logs Settings", version="0.4.4")
 
 # MCP SDK 2.3 validates SEP-2133 reverse-DNS identifiers in its Extension
 # helper; OpenAI's existing extension ID is `openai/settings`. Populate the
@@ -54,9 +55,11 @@ def _register_environment_actions() -> None:
         environments = config.public_environment_details()["environments"]
     except config.ConfigurationError:
         return  # settings_read reports the underlying configuration error
+    active_actions = set()
     for environment in environments:
         name = environment["id"]
         credential_name = settings.credential_tool(name)
+        active_actions.add(credential_name)
         if not mcp._tool_manager.get_tool(credential_name):
             def credential_action(selected: str):
                 def open_for_environment() -> dict[str, Any]:
@@ -66,6 +69,7 @@ def _register_environment_actions() -> None:
             mcp.add_tool(credential_action(name), name=credential_name,
                          title=f"配置 {name} 的凭证", annotations=WRITE, meta=HIDDEN)
         test_name = settings.test_tool(name)
+        active_actions.add(test_name)
         if not mcp._tool_manager.get_tool(test_name):
             def test_action(selected: str):
                 def test_for_environment() -> dict[str, Any]:
@@ -74,6 +78,39 @@ def _register_environment_actions() -> None:
                 return test_for_environment
             mcp.add_tool(test_action(name), name=test_name,
                          title=f"测试 {name} 的连接", annotations=READ, meta=HIDDEN)
+        request_delete_name = settings.request_delete_tool(name)
+        if environment.get("storage") != "file":
+            continue
+        active_actions.add(request_delete_name)
+        if not mcp._tool_manager.get_tool(request_delete_name):
+            def request_delete_action(selected: str):
+                def preview_deletion() -> dict[str, Any]:
+                    details = _translate(config.public_environment_details)
+                    matching = next((item for item in details["environments"] if item["id"] == selected), None)
+                    if matching is None:
+                        raise ToolError("环境不存在，请刷新设置。")
+                    if matching.get("storage") != "file":
+                        raise ToolError("该环境来自进程环境变量，不能通过设置页面删除。")
+                    # Deletion clears the persisted default even if a separate
+                    # process override currently points at another environment.
+                    is_default = (details["default_environment"] == selected
+                                  or details.get("persisted_default_environment") == selected)
+                    return {"action": "confirm_delete", "environment": selected,
+                            "default_environment": is_default}
+                return preview_deletion
+            mcp.add_tool(request_delete_action(name), name=request_delete_name, title=f"删除 {name} 环境",
+                         annotations=READ, meta={"ui": {"resourceUri": URI, "visibility": ["app"]}})
+    # Another process may have removed a profile since this server started.
+    # Reconcile on every settings read so its old actions do not linger.
+    for tool in mcp._tool_manager.list_tools():
+        if tool.name.startswith(("configure_credentials__", "test_connection__", "request_delete__")) and tool.name not in active_actions:
+            mcp.remove_tool(tool.name)
+
+
+def _remove_environment_actions(name: str) -> None:
+    for tool in (settings.credential_tool(name), settings.test_tool(name), settings.request_delete_tool(name)):
+        if mcp._tool_manager.get_tool(tool):
+            mcp.remove_tool(tool)
 
 
 @mcp.tool(name="settings_read", title="读取日志设置", annotations=READ)
@@ -101,6 +138,17 @@ async def _notify_tool_change(ctx: Context) -> None:
 async def create_environment(ctx: Context) -> dict[str, Any]:
     result = _translate(settings.create)
     _register_environment_actions()
+    await _notify_tool_change(ctx)
+    return result
+
+
+@mcp.tool(name="delete_environment", title="确认删除环境", annotations=DELETE, meta=HIDDEN)
+async def delete_environment(environment: str, confirmation: str, ctx: Context) -> dict[str, Any]:
+    """Delete one environment only after explicit confirmation of its exact ID."""
+    if not environment or confirmation != environment:
+        raise ToolError("确认的环境名称不匹配，未删除环境。")
+    result = _translate(config.delete_environment, environment)
+    _remove_environment_actions(environment)
     await _notify_tool_change(ctx)
     return result
 

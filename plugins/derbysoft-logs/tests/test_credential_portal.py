@@ -5,6 +5,7 @@ import json
 from http.client import HTTPConnection
 import time
 from urllib.parse import urlsplit
+from uuid import UUID
 
 import httpx
 import pytest
@@ -85,6 +86,7 @@ def test_local_http_authenticates_token_origin_and_host_before_returning_state(p
 
 
 def test_saving_stays_pinned_when_default_changes_and_preserves_other_services(isolated, portal):
+    before_instance = credential_portal._environment("uat")["instance_id"]
     config.set_default_environment("prod")
     saved = post(portal, {"service": "opensearch", "secret": "new-uat-password"})
     assert saved.status_code == 200
@@ -94,6 +96,7 @@ def test_saving_stays_pinned_when_default_changes_and_preserves_other_services(i
     assert config.load_profile("uat")["streamlog"]["authorization"] == "uat-authorization"
     assert config.load_profile("prod")["opensearch"]["password"] == "prod-password"
     assert config.get_default_index("uat") == "uat-index-*"
+    assert credential_portal._environment("uat")["instance_id"] == before_instance
     assert "new-uat-password" not in (isolated[0] / "uat.json").read_text(encoding="utf-8")
 
 
@@ -103,6 +106,62 @@ def test_changed_connection_blocks_old_credential_page(isolated, portal):
     assert response.status_code == 409
     assert "new-uat-password" not in response.text
     assert "password" not in config.load_profile("uat")["opensearch"]
+
+
+@pytest.mark.parametrize("legacy_profile", [False, True])
+def test_old_portal_cannot_save_after_same_name_recreated(isolated, legacy_profile):
+    home, stored = isolated
+    profile_path = home / "uat.json"
+    if legacy_profile:
+        old = json.loads(profile_path.read_text(encoding="utf-8"))
+        old["environment"].pop("instance_id")
+        profile_path.write_text(json.dumps(old), encoding="utf-8")
+        # Saving an existing old profile must not silently invent or rotate an ID.
+        config.save_profile({"streamlog": {"url": "https://uat-stream.example.test", "authorization": "uat-authorization"}},
+                            "uat", merge=True)
+        assert credential_portal._environment("uat")["instance_id"] is None
+    original = credential_portal._environment("uat")
+    service_patch = {service: {key: value for key, value in fields.items() if key != "has_secret"}
+                     for service, fields in original["services"].items()}
+    instance = credential_portal.CredentialPortal("uat", lifetime=30)
+    try:
+        config.delete_environment("uat")
+        created = config.create_environment("uat", "UAT", "uat")
+        config.update_environment("uat", service_patch)
+        replacement = credential_portal._environment("uat")
+        assert replacement["instance_id"] == created["instance_id"]
+        assert UUID(replacement["instance_id"]).version == 4
+        assert replacement["instance_id"] != original["instance_id"]
+        # Compare everything else used in the portal fingerprint: only the
+        # instance changes after recreating exactly the same service settings.
+        actual_fields = {service: {key: value for key, value in fields.items() if key != "has_secret"}
+                         for service, fields in replacement["services"].items()}
+        assert actual_fields == service_patch
+        response = post(instance, {"service": "opensearch", "secret": "stale-portal-secret"})
+        assert response.status_code == 409
+        assert "stale-portal-secret" not in response.text
+        assert "password" not in config.load_profile("uat")["opensearch"]
+        assert "stale-portal-secret" not in stored.values()
+    finally:
+        instance.close()
+
+
+def test_profile_instance_is_stable_across_edits_and_credential_updates(isolated):
+    before = credential_portal._environment("uat")["instance_id"]
+    assert UUID(before).version == 4
+    config.update_environment("uat", {"label": "UAT (renamed)", "opensearch": {"default_index": "new-index-*"}})
+    config.save_profile({"streamlog": {"url": "https://uat-stream.example.test", "authorization": "updated-authorization"}},
+                        "uat", merge=True)
+    assert credential_portal._environment("uat")["instance_id"] == before
+    assert json.loads((isolated[0] / "uat.json").read_text(encoding="utf-8"))["environment"]["instance_id"] == before
+
+
+def test_direct_profile_creation_mints_an_instance_id(isolated):
+    config.save_profile({"opensearch": {"url": "https://new.example.test", "username": "reader", "password": "fixture"}}, "new")
+    before = credential_portal._environment("new")["instance_id"]
+    assert UUID(before).version == 4
+    config.save_profile({"opensearch": {"url": "https://new.example.test", "username": "reader", "password": "updated"}}, "new")
+    assert credential_portal._environment("new")["instance_id"] == before
 
 
 def test_keyring_failure_does_not_replace_profile_or_echo_secret(isolated, portal, monkeypatch):

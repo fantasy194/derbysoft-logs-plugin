@@ -38,6 +38,10 @@ def test_tool(environment: str) -> str:
     return "test_connection__" + environment
 
 
+def request_delete_tool(environment: str) -> str:
+    return "request_delete__" + environment
+
+
 def _fields(details: dict[str, Any]) -> dict[str, tuple[str, ...]]:
     fields: dict[str, tuple[str, ...]] = {}
     for environment in details["environments"]:
@@ -110,6 +114,8 @@ def read() -> dict[str, Any]:
                 {"kind": "tool", "tool": credential_tool(name), "description": "凭证状态：" + status},
                 {"kind": "tool", "tool": test_tool(name)},
             ])
+            if env.get("storage") == "file":
+                items.append({"kind": "tool", "tool": request_delete_tool(name), "description": "打开确认页面后才能删除此环境"})
             layout.append({"kind": "group", "title": name, "items": items})
         return {"schema": {"type": "object", "properties": props}, "values": values, "layout": layout}
 

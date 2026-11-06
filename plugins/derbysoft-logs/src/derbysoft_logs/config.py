@@ -346,7 +346,7 @@ def _save_profile(values: dict, name: str | None = None, *, merge: bool = False)
                 meta = previous["environment"]
                 if not isinstance(meta, dict):
                     raise ValueError()
-                output["environment"] = {key: meta[key] for key in ("label", "kind") if key in meta}
+                output["environment"] = {key: meta[key] for key in ("label", "kind", "instance_id") if key in meta}
             if merge:
                 for section, saved in previous.items():
                     if section not in ENV_KEYS or section in values:
@@ -357,6 +357,10 @@ def _save_profile(values: dict, name: str | None = None, *, merge: bool = False)
                     output[section] = {k: v for k, v in saved.items() if k in allowed}
         except (ValueError, OSError):
             raise ConfigurationError("Cannot read the selected profile; run configure again.") from None
+    else:
+        # An environment name can be deleted and reused. Bind old local
+        # credential pages to this particular profile instance, not its name.
+        output["environment"] = {"instance_id": uuid.uuid4().hex}
     generation = uuid.uuid4().hex
     for section, data in values.items():
         normalized = require_section({section: data}, section)
@@ -437,7 +441,7 @@ def _environment_view(name: str, data: dict, storage: str = "file") -> dict:
         defaults.update({key: saved[key] for key in fields if key in saved})
         defaults["has_secret"] = bool(saved.get("credential_store") and saved.get("secret_id", section))
         services[section] = defaults
-    return {"id": name, "label": metadata.get("label") or name, "storage": storage,
+    return {"id": name, "instance_id": metadata.get("instance_id"), "label": metadata.get("label") or name, "storage": storage,
             "kind": metadata.get("kind") or "custom", "services": services}
 
 
@@ -488,9 +492,110 @@ def create_environment(name: str, label: str = "", kind: str = "custom") -> dict
         path = config_home() / f"{name}.json"
         if path.exists() or name in _available_environments():
             raise ConfigurationError(f"Environment '{name}' already exists.")
-        data = {"environment": {"label": label or name, "kind": kind}}
+        data = {"environment": {"label": label or name, "kind": kind, "instance_id": uuid.uuid4().hex}}
         _atomic_json(path, data)
         return _environment_view(name, data)
+
+
+def _restore_file(path: Path, contents: bytes) -> None:
+    """Restore a pre-operation file snapshot, preserving exact bytes."""
+    if path.exists() and path.read_bytes() == contents:
+        return
+    fd, tmp = tempfile.mkstemp(prefix=".restore-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(contents)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def delete_environment(name: str) -> dict:
+    """Delete one saved environment and referenced secrets, with best-effort rollback.
+
+    The configuration lock coordinates the profile, default pointer and credential
+    store with all other plugin writers. No credential values leave this function.
+    """
+    name = _canonical_name(name)
+    with _storage_lock():
+        resolve_environment(name)
+        home = config_home()
+        profile_path = home / f"{name}.json"
+        if not profile_path.exists():
+            raise ConfigurationError("A headless virtual environment cannot be deleted from plugin settings; remove its environment variables.")
+        if profile_path.is_symlink() or not profile_path.is_file():
+            raise ConfigurationError("Cannot delete an environment whose profile is not a regular file.")
+        selected = os.environ.get("DERBYSOFT_LOGS_PROFILE")
+        if selected is not None and selected.casefold() == name.casefold():
+            raise ConfigurationError("This environment is selected by DERBYSOFT_LOGS_PROFILE. Remove the process override before deleting it.")
+
+        # A corrupt default must not be overwritten or silently discarded.
+        settings_path = home / "settings.json"
+        settings = _settings()
+        default_cleared = bool(settings and settings.get("default_environment") == name)
+        if default_cleared and settings_path.is_symlink():
+            raise ConfigurationError("Cannot change a symlinked default setting while deleting an environment.")
+        data = _read_stored(name)
+        try:
+            profile_bytes = profile_path.read_bytes()
+            settings_bytes = settings_path.read_bytes() if default_cleared else None
+        except OSError:
+            raise ConfigurationError("Cannot read the environment configuration; nothing was deleted.") from None
+
+        credential_service = _service(name)
+        credentials = []
+        seen = set()
+        try:
+            for section in ENV_KEYS:
+                entry = data.get(section, {})
+                if not entry.get("credential_store"):
+                    continue
+                account = entry.get("secret_id", section)
+                if not isinstance(account, str) or not account or len(account) > 4096 or any(ord(c) < 32 for c in account):
+                    raise ConfigurationError("Invalid credential reference; nothing was deleted.")
+                if account in seen:
+                    continue
+                seen.add(account)
+                secret = keyring.get_password(credential_service, account)
+                if secret is not None:
+                    credentials.append((account, secret))
+        except ConfigurationError:
+            raise
+        except Exception:
+            raise ConfigurationError("Cannot access the OS credential store; nothing was deleted.") from None
+
+        attempted_credentials = []
+        try:
+            for account, secret in credentials:
+                # Include the failing account: a backend may fail after deleting it.
+                attempted_credentials.append((account, secret))
+                keyring.delete_password(credential_service, account)
+            if default_cleared:
+                updated = dict(settings)
+                updated["default_environment"] = None
+                _atomic_json(settings_path, updated, ".settings-")
+            profile_path.unlink()
+        except Exception:
+            rollback_errors = []
+            try:
+                _restore_file(profile_path, profile_bytes)
+            except Exception:
+                rollback_errors.append("profile")
+            if default_cleared:
+                try:
+                    _restore_file(settings_path, settings_bytes)
+                except Exception:
+                    rollback_errors.append("default")
+            for account, secret in attempted_credentials:
+                try:
+                    keyring.set_password(credential_service, account, secret)
+                except Exception:
+                    rollback_errors.append("credential")
+            if rollback_errors:
+                raise ConfigurationError("Environment deletion failed and rollback was incomplete. Check the profile, default environment, and OS credential store before retrying.") from None
+            raise ConfigurationError("Environment deletion failed; prior configuration and credentials were restored.") from None
+        return {"environment": name, "deleted": True, "default_cleared": default_cleared}
 
 
 def _validate_public_field(section: str, key: str, value: str) -> str:

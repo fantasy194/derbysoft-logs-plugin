@@ -30,8 +30,9 @@ def _environment(environment: str) -> dict:
 
 def _fingerprint(item: dict) -> str:
     # Stored-secret presence may change after saving another service in this page.
-    data = {service: {k: v for k, v in fields.items() if k != "has_secret"}
-            for service, fields in item["services"].items()}
+    data = {"instance_id": item.get("instance_id"),
+            "services": {service: {k: v for k, v in fields.items() if k != "has_secret"}
+                         for service, fields in item["services"].items()}}
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
