@@ -1,0 +1,10 @@
+{
+  "name": "derbysoft-logs",
+  "interface": {"displayName": "DerbySoft Logs"},
+  "plugins": [{
+    "name": "derbysoft-logs",
+    "source": {"source": "local", "path": "./plugins/derbysoft-logs"},
+    "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+    "category": "Productivity"
+  }]
+}

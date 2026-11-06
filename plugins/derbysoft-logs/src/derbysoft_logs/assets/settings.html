@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>DerbySoft Logs 配置中心</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f6f8fc; --surface:#fff; --surface-muted:#f6f8fc; --text:#202a3b; --sub:#64748b; --border:#dce4ef; --accent:#315eea; --accent-hover:#2548bb; --accent-soft:#eef3ff; --success:#067647; --danger:#b42318; --shadow:0 8px 24px #1831530a; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#111827; --surface:#192334; --surface-muted:#202c40; --text:#edf2fb; --sub:#9daec5; --border:#344258; --accent:#8aa7ff; --accent-hover:#b4c5ff; --accent-soft:#283c64; --success:#5bd8a4; --danger:#ffaaa3; --shadow:none; } }
+    :root[data-theme="light"] { color-scheme:light; --bg:#f6f8fc; --surface:#fff; --surface-muted:#f6f8fc; --text:#202a3b; --sub:#64748b; --border:#dce4ef; --accent:#315eea; --accent-hover:#2548bb; --accent-soft:#eef3ff; --success:#067647; --danger:#b42318; --shadow:0 8px 24px #1831530a; }
+    :root[data-theme="dark"] { color-scheme:dark; --bg:#111827; --surface:#192334; --surface-muted:#202c40; --text:#edf2fb; --sub:#9daec5; --border:#344258; --accent:#8aa7ff; --accent-hover:#b4c5ff; --accent-soft:#283c64; --success:#5bd8a4; --danger:#ffaaa3; --shadow:none; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    main { width:min(100%,1020px); margin:auto; padding:28px 28px 100px; }
+    .eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--accent); font-size:12px; font-weight:700; letter-spacing:.04em; }
+    .eyebrow:before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; }
+    .intro { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:22px; }
+    h1 { margin:4px 0; font-size:25px; letter-spacing:-.03em; line-height:1.25; }
+    h2 { font-size:16px; line-height:1.35; margin:0; }
+    p { margin:0; }
+    .intro p, .group-description { color:var(--sub); }
+    .intro p { max-width:65ch; }
+    button, input, select { font:inherit; }
+    button { cursor:pointer; border-radius:8px; min-height:36px; padding:7px 13px; font-weight:600; border:1px solid var(--border); color:var(--text); background:var(--surface); }
+    button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 28%,transparent); outline-offset:1px; }
+    button:disabled { cursor:not-allowed; opacity:.55; }
+    .primary { color:white; background:#315eea; border-color:#315eea; }
+    .primary:hover:not(:disabled) { color:white; background:#2548bb; border-color:#2548bb; }
+    .card { background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow); border-radius:12px; margin:12px 0; overflow:hidden; }
+    .card-head { padding:17px 20px 0; }
+    .card-body { padding:16px 20px 20px; }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
+    .field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+    .field label { font-size:13px; font-weight:650; }
+    .field small { color:var(--sub); line-height:1.4; overflow-wrap:anywhere; }
+    input:not([type="checkbox"]),select { width:100%; min-width:0; height:38px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); padding:7px 10px; }
+    input:not([type="checkbox"]):hover,select:hover { border-color:var(--accent); }
+    input:disabled,select:disabled { opacity:.7; }
+    .check { flex-direction:row; align-items:center; gap:8px; }
+    .check input { width:17px; height:17px; accent-color:var(--accent); }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:17px; }
+    .actions:only-child { margin-top:0; }
+    .action-wrap { display:flex; flex-direction:column; align-items:flex-start; max-width:100%; gap:4px; }
+    .action-wrap small { color:var(--sub); max-width:48ch; }
+    .result { border-radius:8px; padding:10px 12px; margin-top:14px; background:var(--surface-muted); white-space:pre-wrap; overflow-wrap:anywhere; color:var(--sub); }
+    .result:empty { display:none; }
+    .notice { border-radius:10px; margin:12px 0; padding:12px 14px; background:var(--accent-soft); color:var(--text); white-space:pre-line; }
+    .notice.error { color:var(--danger); background:var(--surface); border:1px solid var(--danger); }
+    .notice:empty { display:none; }
+    .footer { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); }
+    .footer-inner { width:min(100%,1020px); margin:auto; padding:12px 28px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .footer-status { color:var(--sub); font-size:13px; }
+    .footer-buttons { display:flex; gap:9px; }
+    .loading { color:var(--sub); padding:25px 2px; }
+    @media (max-width:620px) { main { padding:22px 16px 105px; } .intro { display:block; } .intro button { margin-top:14px; } .fields { grid-template-columns:1fr; } .card-head { padding:15px 15px 0; } .card-body { padding:14px 15px 16px; } .footer-inner { padding:10px 16px; } .footer-status { max-width:45%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">DERBYSOFT LOGS</div>
+    <div class="intro">
+      <div><h1>日志连接配置</h1><p>管理环境、服务连接和默认索引。所有设置与插件原生设置共用；凭证通过单独的安全入口配置。</p></div>
+      <button type="button" id="reload">重新读取</button>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    <form id="settings-form" novalidate><div id="groups" class="loading">正在连接配置服务…</div></form>
+  </main>
+  <div class="footer"><div class="footer-inner">
+    <span id="footer-status" class="footer-status" aria-live="polite">等待配置服务</span>
+    <div class="footer-buttons"><button type="button" id="discard" disabled>放弃修改</button><button type="submit" form="settings-form" class="primary" id="save" disabled>保存更改</button></div>
+  </div></div>
+  <script>
+  (() => {
+    "use strict";
+    const host = window.parent;
+    const pending = new Map();
+    let nextId = 1, hostOrigin = null, initialized = false, busy = false;
+    let state = null, baseline = {}, draft = {};
+    const form = document.getElementById("settings-form");
+    const groupsNode = document.getElementById("groups");
+    const notice = document.getElementById("notice");
+    const footerStatus = document.getElementById("footer-status");
+    const saveButton = document.getElementById("save");
+    const discardButton = document.getElementById("discard");
+    const reloadButton = document.getElementById("reload");
+
+    function send(message) { host.postMessage(message, hostOrigin && hostOrigin !== "null" ? hostOrigin : "*"); }
+    function request(method, params, timeoutMs = 30000) {
+      const id = nextId++;
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { pending.delete(id); reject(new Error("连接超时，请重新读取或在原生设置中重试。")); }, timeoutMs);
+        pending.set(id, {resolve, reject, timer, method});
+        send({jsonrpc:"2.0", id, method, params});
+      });
+    }
+    function notify(method, params) { const msg = {jsonrpc:"2.0", method}; if (params !== undefined) msg.params = params; send(msg); }
+    function setTheme(context) {
+      if (context && (context.theme === "dark" || context.theme === "light")) document.documentElement.dataset.theme = context.theme;
+    }
+    window.addEventListener("message", event => {
+      // MCP host messages are accepted only from the parent window. Pin the
+      // initial response origin for the rest of the session; opaque sandbox
+      // origins use "null", so source checking remains mandatory there.
+      if (event.source !== host || !event.data || event.data.jsonrpc !== "2.0") return;
+      if (hostOrigin !== null && event.origin !== hostOrigin) return;
+      const message = event.data;
+      if (typeof message.id === "number" && pending.has(message.id)) {
+        const item = pending.get(message.id);
+        if (hostOrigin === null) {
+          if (item.method !== "ui/initialize" || (!message.error && (!message.result || typeof message.result !== "object"))) return;
+          hostOrigin = event.origin;
+        }
+        pending.delete(message.id); clearTimeout(item.timer);
+        if (message.error) item.reject(new Error(String(message.error.message || "请求失败")));
+        else item.resolve(message.result);
+      } else if (initialized && message.method === "ui/notifications/host-context-changed") setTheme(message.params);
+    });
+
+    function describeError(error) { return String(error && error.message || error || "请求失败").slice(0, 1000); }
+    function setNotice(message, isError = false) { notice.textContent = message; notice.classList.toggle("error", isError); }
+    function unpack(result) {
+      if (!result || typeof result !== "object") throw new Error("配置服务返回了无效响应。");
+      if (result.isError) {
+        const message = (result.content || []).filter(x => x && x.type === "text").map(x => x.text).join(" ");
+        throw new Error(message || "配置服务拒绝了请求。");
+      }
+      if (result.structuredContent && typeof result.structuredContent === "object") return result.structuredContent;
+      for (const item of result.content || []) if (item && item.type === "text") {
+        try { const value = JSON.parse(item.text); if (value && typeof value === "object") return value; } catch (_) { /* Not structured JSON. */ }
+      }
+      return {};
+    }
+    async function callTool(name, args = {}) { return unpack(await request("tools/call", {name, arguments:args}, name.startsWith("test_connection__") ? 90000 : 30000)); }
+    function diff() { const changes = {}; for (const key of Object.keys(draft)) if (!Object.is(draft[key], baseline[key])) changes[key] = draft[key]; return changes; }
+    function showState() {
+      const count = Object.keys(diff()).length;
+      footerStatus.textContent = busy ? "正在处理…" : !state ? "尚未连接" : count ? `有 ${count} 项未保存的更改` : "设置已同步";
+      saveButton.disabled = busy || !state || !count;
+      discardButton.disabled = busy || !state || !count;
+      reloadButton.disabled = busy;
+      for (const element of groupsNode.querySelectorAll("input,select,button")) element.disabled = busy;
+    }
+    function setBusy(value) { busy = value; showState(); }
+    function labelForAction(item) {
+      if (typeof item.title === "string" && item.title.trim()) return item.title;
+      if (item.tool === "create_environment") return "新增环境";
+      if (item.tool === "migrate_legacy_environment") return "迁移旧环境";
+      if (item.tool.startsWith("configure_credentials__")) return "配置凭证";
+      if (item.tool.startsWith("test_connection__")) return "测试连接";
+      return item.tool;
+    }
+    function field(key, schema) {
+      const wrapper = document.createElement("div"); wrapper.className = "field";
+      const id = "field-" + key;
+      const label = document.createElement("label"); label.htmlFor = id; label.textContent = schema.title || key;
+      let control;
+      if (Array.isArray(schema.enum)) {
+        control = document.createElement("select");
+        for (const value of schema.enum) {
+          const option = document.createElement("option"); option.value = String(value); option.textContent = value === "" ? "未设置" : String(value); control.appendChild(option);
+        }
+        if (!schema.enum.includes(draft[key])) {
+          const option = document.createElement("option"); option.value = String(draft[key] ?? ""); option.textContent = String(draft[key] ?? "") + "（当前值）"; control.appendChild(option);
+        }
+      } else {
+        control = document.createElement("input");
+        control.type = schema.type === "boolean" ? "checkbox" : (schema.type === "number" || schema.type === "integer" ? "number" : "text");
+        if (typeof schema.minLength === "number") control.minLength = schema.minLength;
+        if (typeof schema.maxLength === "number") control.maxLength = schema.maxLength;
+        if (typeof schema.pattern === "string") control.pattern = schema.pattern;
+        if (typeof schema.minimum === "number") control.min = String(schema.minimum);
+        if (typeof schema.maximum === "number") control.max = String(schema.maximum);
+        if (schema.type === "integer") control.step = "1";
+        else if (schema.type === "number") control.step = "any";
+      }
+      control.id = id; control.name = key; control.autocomplete = "off";
+      if (schema.type === "boolean") { control.checked = Boolean(draft[key]); wrapper.classList.add("check"); }
+      else control.value = String(draft[key] ?? "");
+      if ((state.schema.required || []).includes(key)) control.required = true;
+      const update = () => {
+        if (schema.type === "boolean") draft[key] = control.checked;
+        else if (schema.type === "number" || schema.type === "integer") draft[key] = control.value === "" ? "" : Number(control.value);
+        else draft[key] = control.value;
+        setNotice(""); showState();
+      };
+      control.addEventListener("input", update); control.addEventListener("change", update);
+      wrapper.appendChild(label); wrapper.appendChild(control);
+      if (typeof schema.description === "string" && schema.description) {
+        const help = document.createElement("small"); help.textContent = schema.description; wrapper.appendChild(help);
+      }
+      return wrapper;
+    }
+    function formatResult(result, action) {
+      const environment = typeof result.environment === "string" ? result.environment : "当前环境";
+      if (action.startsWith("configure_credentials__")) {
+        return result.opened ? `已为 ${environment} 打开凭证配置页面。请在该页面完成输入。` : "未能打开凭证配置页面，请重试。";
+      }
+      if (action === "create_environment") return `已创建环境 ${environment}。`;
+      if (action === "migrate_legacy_environment") return `已将旧环境迁移为 ${environment}，请检查其连接和默认索引。`;
+      if (action.startsWith("test_connection__")) {
+        const lines = [`${environment} 连接状态：`];
+        for (const [key, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"]]) {
+          const status = result[key];
+          if (!status || !status.configured) { lines.push(`${title}：未配置`); continue; }
+          if (status.reachable === false) { lines.push(`${title}：连接失败，请检查地址、网络和认证。`); continue; }
+          if (key === "streamlog") { lines.push(`${title}：已配置；请用已知 client 和 token 验证查询权限。`); continue; }
+          if (key === "opensearch" && status.http_status === 403) { lines.push(`${title}：地址可达，根路径被拒绝（403）；具体索引权限可能不同。`); continue; }
+          if (key === "opensearch" && status.root_accessible) { lines.push(`${title}：地址可达；具体索引权限仍需查询验证。`); continue; }
+          if (key === "loki" && status.labels_accessible) { lines.push(`${title}：标签接口可读；应用日志仍需查询验证。`); continue; }
+          if (status.http_status) { lines.push(`${title}：地址可达（HTTP ${status.http_status}），请检查认证或权限。`); continue; }
+          lines.push(`${title}：已配置，尚未验证查询。`);
+        }
+        return lines.join("\n");
+      }
+      return "操作已完成。";
+    }
+    function render() {
+      groupsNode.replaceChildren(); groupsNode.className = "";
+      const definitions = state.schema.properties || {};
+      const shown = new Set();
+      const layouts = Array.isArray(state.layout) ? [...state.layout] : [];
+      const listed = new Set(layouts.flatMap(group => (group.items || []).filter(item => item.kind === "property").map(item => item.property)));
+      const other = Object.keys(definitions).filter(key => !listed.has(key));
+      if (other.length) layouts.push({kind:"group", title:"其他设置", items:other.map(property => ({kind:"property", property}))});
+      for (const group of layouts) {
+        if (!group || group.kind !== "group" || !Array.isArray(group.items)) continue;
+        const card = document.createElement("section"); card.className = "card";
+        const head = document.createElement("div"); head.className = "card-head";
+        const heading = document.createElement("h2"); heading.textContent = group.title || "设置"; head.appendChild(heading);
+        const body = document.createElement("div"); body.className = "card-body";
+        const fields = document.createElement("div"); fields.className = "fields";
+        const actions = document.createElement("div"); actions.className = "actions";
+        const resultNode = document.createElement("div"); resultNode.className = "result"; resultNode.setAttribute("role", "status");
+        for (const item of group.items) {
+          if (!item) continue;
+          if (item.kind === "property" && definitions[item.property] && !shown.has(item.property)) {
+            shown.add(item.property); fields.appendChild(field(item.property, definitions[item.property]));
+          } else if (item.kind === "tool" && typeof item.tool === "string" && item.tool !== "open_log_settings") {
+            const wrap = document.createElement("div"); wrap.className = "action-wrap";
+            const button = document.createElement("button"); button.type = "button"; button.textContent = labelForAction(item);
+            button.addEventListener("click", () => runAction(item.tool, resultNode)); wrap.appendChild(button);
+            if (typeof item.description === "string" && item.description) { const description = document.createElement("small"); description.textContent = item.description; wrap.appendChild(description); }
+            actions.appendChild(wrap);
+          }
+        }
+        if (fields.children.length) body.appendChild(fields);
+        if (actions.children.length) body.appendChild(actions);
+        body.appendChild(resultNode); card.appendChild(head); card.appendChild(body); groupsNode.appendChild(card);
+      }
+      if (!groupsNode.children.length) { groupsNode.className = "loading"; groupsNode.textContent = "没有可显示的设置。"; }
+      showState();
+    }
+    function validateState(data) {
+      if (!data || !data.schema || typeof data.schema !== "object" || !data.schema.properties || typeof data.values !== "object" || Array.isArray(data.values)) throw new Error("配置服务返回的设置结构无效。");
+      for (const key of Object.keys(data.schema.properties)) if (!(key in data.values)) throw new Error("配置服务缺少设置值：" + key);
+      return data;
+    }
+    async function readSettings() {
+      const data = validateState(await callTool("settings_read"));
+      state = data; baseline = {...data.values}; draft = {...data.values}; render();
+    }
+    async function saveChanges() {
+      const changes = diff(); if (!Object.keys(changes).length) return;
+      if (!form.reportValidity()) throw new Error("请检查标记的设置项。");
+      const updated = await callTool("settings_update", {set:changes});
+      if (!updated || !updated.values || typeof updated.values !== "object" || Array.isArray(updated.values)) throw new Error("配置服务未确认保存，已保留未保存的修改。");
+      // Only clear dirty state after the server confirms every changed value.
+      for (const [key, value] of Object.entries(changes)) {
+        if (!(key in updated.values) || !Object.is(updated.values[key], value)) throw new Error("配置服务返回的值与提交值不一致，已保留本地修改；请重新读取后确认。");
+      }
+      baseline = {...updated.values}; draft = {...updated.values};
+    }
+    async function runAction(name, resultNode) {
+      if (busy || !state) return;
+      setNotice(""); setBusy(true);
+      try {
+        await saveChanges();
+        const result = await callTool(name);
+        await readSettings();
+        // Re-render replaces the previous group node. A shared notice keeps
+        // action results visible even when the action changes the schema.
+        setNotice(formatResult(result, name));
+      } catch (error) { resultNode.textContent = describeError(error); setNotice(describeError(error), true); }
+      finally { setBusy(false); }
+    }
+    form.addEventListener("submit", async event => {
+      event.preventDefault(); if (busy || !state) return; setNotice(""); setBusy(true);
+      try { await saveChanges(); await readSettings(); setNotice("设置已保存。"); }
+      catch (error) { setNotice(describeError(error), true); }
+      finally { setBusy(false); }
+    });
+    discardButton.addEventListener("click", () => { if (!busy && state) { draft = {...baseline}; render(); setNotice("已放弃未保存的更改。"); } });
+    reloadButton.addEventListener("click", async () => {
+      if (busy) return;
+      if (Object.keys(diff()).length) { setNotice("请先保存或放弃未保存的修改，再重新读取。", true); return; }
+      setNotice(""); setBusy(true);
+      try { await readSettings(); setNotice("已重新读取当前设置。"); }
+      catch (error) { setNotice(describeError(error), true); }
+      finally { setBusy(false); }
+    });
+    async function start() {
+      if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
+      try {
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
+        await readSettings();
+      } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }
+    }
+    if (typeof ResizeObserver !== "undefined") {
+      let pendingResize = false;
+      new ResizeObserver(() => {
+        if (!initialized || pendingResize) return;
+        pendingResize = true; requestAnimationFrame(() => { pendingResize = false; notify("ui/notifications/size-changed", {height:document.documentElement.scrollHeight, width:document.documentElement.scrollWidth}); });
+      }).observe(document.documentElement);
+    }
+    start();
+  })();
+  </script>
+</body>
+</html>

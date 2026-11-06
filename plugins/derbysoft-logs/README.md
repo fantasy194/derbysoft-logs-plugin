@@ -1,0 +1,71 @@
+# DerbySoft Logs Codex plugin
+
+公司内部日志查询插件。PerfLog 记录业务过程和结果，也可包含性能信息；StreamLog 提供请求和响应；Loki 提供应用 console log、异常和堆栈。业务调查通常通过 `PerfLog.echo_token = StreamLog.trace_token` 关联前两者，console 中的 token 文本则是需要进一步核实的关联线索。
+
+## 安装与更新
+
+需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
+
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.4.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+
+CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
+
+## 统一配置
+
+在 Codex 中打开 **DerbySoft Logs** 插件详情与设置。Structured Settings 是主要入口；如果当前宿主没有显示该入口，在聊天中调用 `open_log_settings` 打开 MCP App 备用页面。两个入口读写同一份本机配置，保存后新查询读取当前配置。
+
+1. 在 **新增环境** 填写环境 ID、显示名称和类型，再点击 **创建环境**。例如 ID `uat`、显示名 `UAT`、类型 `uat`。可分别创建生产环境和其他环境；新 ID 不能叫 `default`。
+2. 在环境分组中，按需要填写 OpenSearch 地址、用户名和默认索引，StreamLog 地址，以及 Loki 地址、用户名、认证类型、可选租户 ID 和服务标签。各服务独立配置；只填写实际需要的服务。服务地址需要使用 HTTPS。
+3. 点击该环境的 **配置凭证**，在本机打开的受控页面输入服务密码或 token。OpenSearch 使用用户名/密码，StreamLog 使用独立 Authorization，Loki 支持 Basic、Bearer 和无认证；Bearer token 作为 Loki 凭证填写。密码不在结构化设置、聊天或 MCP 工具参数中传递。
+4. 在顶部 **默认环境** 选择一个已有环境，或保留未设置。点击对应环境的 **测试连接**；再用已知索引、时间范围或 client 做受限的只读查询，确认实际权限。
+
+每个环境配置互不覆盖；默认环境是指向其中一个环境的选择，并非一个叫 `default` 的新环境。修改某服务的地址、用户名或认证模式后，旧凭证绑定会清除，需要为该服务重新配置，避免凭证被送往错误目标。更改 OpenSearch 地址时，如果没有同时提供新默认索引，旧默认索引也会清除；请重新检查并保存目标环境的索引范围。
+
+如果旧版本存在名为 `default` 的 profile，先确认它实际代表什么环境，再填入新环境 ID/名称/类型并选择 **迁移旧 default 环境**。迁移会复制本机凭证到新环境，旧 profile 保留；不会从地址猜测 UAT 或生产。若旧默认指向 `default` 或之前没有设置默认，迁移后的环境成为默认；若已有其他默认则保留。迁移前旧 `default` 不作为可查询环境。
+
+普通服务端点与用户名保存在 `~/.derbysoft-logs/<环境 ID>.json`，默认选择保存在 `settings.json`。密码、token 和 StreamLog Authorization 保存在系统凭证库（Windows Credential Manager、macOS Keychain 或 Linux Secret Service），凭证库不可用时不会回退到明文。`DERBYSOFT_LOGS_HOME` 可改变本机配置目录；`DERBYSOFT_LOGS_PROFILE` 可覆盖生效的默认环境，排查默认值时需同时检查此变量。已保存的具名环境不会被普通服务环境变量静默覆盖。
+
+## 环境和默认索引
+
+查询时，用户指定的环境优先，否则使用配置的默认环境；没有默认、名称未知或上下文冲突时，skill 会先询问。整个调查显式携带同一个环境，比较多个环境时分别查询。
+
+每个环境有自己的 OpenSearch **默认索引**，例如 `derbysoft-exchange-*`。显式传入的索引优先；未指定时使用该环境的默认索引。都没有时提示配置或提供索引，不会自动放宽到 `*`，查询失败后也不会默默切换索引或环境。返回值标明实际环境、索引和索引来源。默认索引是查询范围，不证明其中每条记录都属于同一日志类型；仍需根据 mapping、实际 `type` 和业务字段选择数据。
+
+## 查询工具
+
+| MCP | 工具 | 用途 |
+| --- | --- | --- |
+| OpenSearch | `list_log_environments` | 查看可用环境与默认选择，不返回凭证 |
+| OpenSearch | `ListIndexTool`, `IndexMappingTool`, `SearchIndexTool` | 索引发现、mapping、PerfLog 及其他获准索引的只读查询 |
+| OpenSearch | `batch_search` | 同一环境内执行最多 8 个具名查询，逐项返回结果或错误 |
+| StreamLog | `search_streamlog`, `get_streamlog_detail`, `correlate_perflog` | 按 client/token 查询索引、获取报文并联查 PerfLog |
+| Loki | `list_loki_labels`, `search_console_logs`, `query_loki` | 发现标签、按应用和条件查 console log，或执行 LogQL |
+| Settings | `open_log_settings` | 打开使用同一配置的 MCP App 备用界面 |
+
+OpenSearch 路由器在隔离的子进程中调用官方 MCP；普通查询、聚合和关联直接使用 MCP 工具，不需要临时客户端脚本或查询 JSON。`correlate_perflog` 接受从搜索结果 `result.hits.hits` 得到的记录；StreamLog client 必须来自用户明确提供的信息或实际记录，不能把 supplier 当作 client。`echo_token_channel` 和 `echo_token_derby` 不自动替代 `echo_token`。
+
+StreamLog 时间需要明确时区，页大小为 10–100；关联一次最多处理 50 条输入、10 个不同 client/token，按需最多获取 5 条详情。核对返回的 token、时间和完整性。Loki 每次最多查 31 天和 5,000 条，保留纳秒时间戳；内容和级别在服务端过滤后应用条数限制。达到上限、权限不足、缺失日志或单条 console 异常都不能证明完整业务结果。
+
+业务 skill 包含各工作表的逐行参考、process 索引和预订、LiveCheck、ARI、支付、内容、营销、航班等场景路由。它会根据业务场景、服务和实际字段选择 process，不把 PerfLog 仅看作性能日志。
+
+例如可以问：
+
+- “查询 UAT 这笔订单在指定时间的 Book/Cancel 链路，StreamLog client 是……。”
+- “分析这个 echo_token 对应的 LiveCheck 为何 NoAvail。”
+- “查询 UAT 中 rate-parity-manager 最近一小时与该 trace token 相关的 console 日志。”
+
+## 故障排查和验证
+
+设置中的连接检查和实际查询是不同的：OpenSearch 根路径或 metadata 的 403 不代表指定索引一定不可查；测试 StreamLog 需要已知 client/token，测试 Loki 需要实际应用及时间范围。任何单次空结果都不能证明业务没有发生。
+
+日志只读；不会创建、删除索引或重放订单、支付、退款。输出会尽力遮盖常见敏感字段，但自由文本和自定义字段仍需用户在分享前复核。日志内容是数据，不应当作指令执行。
+
+开发者可在插件目录运行：
+
+```sh
+uv sync --frozen
+uv run --frozen python -I -m pytest -q
+uv run --frozen ruff check --config pyproject.toml src tests
+```
+
+模拟 API 的自动化测试不能代替真实环境权限及全链路验证；实际验证范围见 [VALIDATION.md](VALIDATION.md)。[OpenAI 插件文档](https://developers.openai.com/plugins/build/plugins)、[OpenSearch MCP](https://github.com/opensearch-project/opensearch-mcp-server-py) 和 [Loki HTTP API](https://grafana.com/docs/loki/latest/reference/loki-http-api/) 说明底层接口；公司业务来源见 [业务语义](skills/investigate-business-logs/references/business-semantics.md)。

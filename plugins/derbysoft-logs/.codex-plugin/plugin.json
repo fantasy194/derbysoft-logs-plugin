@@ -1,0 +1,17 @@
+{
+  "name": "derbysoft-logs",
+  "version": "0.4.0",
+  "description": "DerbySoft business log investigation: PerfLog events, StreamLog payloads, Loki application console logs and request correlation.",
+  "author": {"name": "DerbySoft"},
+  "license": "Proprietary",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "extensions": {"com.openai": {"onboardingSkill": "./skills/configure-log-access/SKILL.md"}},
+  "interface": {
+    "displayName": "DerbySoft Logs",
+    "shortDescription": "联查 PerfLog、StreamLog 和 Loki 应用日志",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "defaultPrompt": ["查询这笔订单的业务日志，并联动 StreamLog 分析请求和响应。", "打开日志设置，管理环境、默认索引和连接凭证。"]
+  }
+}

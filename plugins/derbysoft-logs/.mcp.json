@@ -1,0 +1,66 @@
+{
+  "mcpServers": {
+    "settings": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--project", ".", "python", "-I", "-m", "derbysoft_logs.settings_server"],
+      "cwd": ".",
+      "env_vars": ["DERBYSOFT_LOGS_HOME", "DERBYSOFT_LOGS_PROFILE"],
+      "startup_timeout_sec": 120,
+      "tool_timeout_sec": 120
+    },
+    "opensearch": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--frozen",
+        "--project",
+        ".",
+        "python",
+        "-I",
+        "-m",
+        "derbysoft_logs.cli",
+        "opensearch"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "DERBYSOFT_LOGS_HOME",
+        "DERBYSOFT_LOGS_PROFILE",
+        "OPENSEARCH_URL",
+        "OPENSEARCH_USERNAME",
+        "OPENSEARCH_PASSWORD"
+      ],
+      "startup_timeout_sec": 120,
+      "tool_timeout_sec": 120
+    },
+    "loki": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--project", ".", "python", "-I", "-m", "derbysoft_logs.loki_server"],
+      "cwd": ".",
+      "env_vars": ["DERBYSOFT_LOGS_HOME", "DERBYSOFT_LOGS_PROFILE", "LOKI_URL", "LOKI_USERNAME", "LOKI_PASSWORD", "LOKI_AUTH_TYPE", "LOKI_TENANT_ID", "LOKI_SERVICE_LABEL"],
+      "startup_timeout_sec": 120,
+      "tool_timeout_sec": 120
+    },
+    "streamlog": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--frozen",
+        "--project",
+        ".",
+        "python",
+        "-I",
+        "-m",
+        "derbysoft_logs.server"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "DERBYSOFT_LOGS_HOME",
+        "DERBYSOFT_LOGS_PROFILE",
+        "STREAMLOG_URL",
+        "STREAMLOG_AUTHORIZATION"
+      ],
+      "startup_timeout_sec": 120,
+      "tool_timeout_sec": 120
+    }
+  }
+}
