@@ -63,7 +63,7 @@ def read() -> dict[str, Any]:
         props: dict[str, Any] = {
             "default_environment": {
                 "type": "string", "title": "默认环境", "enum": [NO_DEFAULT] + names,
-                "description": "不选择时，查询前须指定环境。旧 default 不是环境类型。",
+                "description": "未设置时，查询前须选择环境。旧 default 需确认后迁移。",
             },
             "new_environment_id": {"type": "string", "title": "新环境 ID", "maxLength": 64,
                                    "description": "例如 uat 或 prod；不能使用 default。"},
@@ -73,14 +73,14 @@ def read() -> dict[str, Any]:
         values: dict[str, Any] = {"default_environment": selected, **_draft}
         layout: list[dict[str, Any]] = [{"kind": "group", "title": "环境选择", "items": [
             {"kind": "property", "property": "default_environment"},
-            {"kind": "tool", "tool": "open_log_settings", "description": "打开完整环境管理页面"},
+            {"kind": "tool", "tool": "open_log_settings"},
         ]}]
         if details.get("default_error"):
             props["default_environment"]["description"] += " 当前默认设置无效，请重新选择。"
         if details.get("default_source") == "process":
             props["default_environment"]["description"] += " 当前环境变量 DERBYSOFT_LOGS_PROFILE 覆盖默认值；移除它后才能在此修改默认。"
         new_items = [{"kind": "property", "property": key} for key in _DRAFT_DEFAULTS]
-        new_items.append({"kind": "tool", "tool": "create_environment", "description": "创建命名环境"})
+        new_items.append({"kind": "tool", "tool": "create_environment"})
         if details.get("legacy_default_available"):
             new_items.append({"kind": "tool", "tool": "migrate_legacy_environment",
                               "description": "将旧 default 迁移到上面填写的环境 ID；请先确认它的实际环境。"})
@@ -102,15 +102,28 @@ def read() -> dict[str, Any]:
                     props[key] = {"type": "string", "title": title}
                     if field == "auth_type":
                         props[key]["enum"] = ["basic", "bearer", "none"]
+                        props[key]["description"] = "更改认证方式会移除旧凭证。"
+                    if field == "url":
+                        props[key]["description"] = ("更改地址会移除旧凭证和未同时修改的默认索引。"
+                                                     if service == "opensearch" else "更改地址会移除旧凭证。")
+                    if field == "username":
+                        props[key]["description"] = "更改账号会移除旧凭证。"
                     if field == "default_index":
                         props[key]["description"] = "未显式指定索引时，仅使用此环境配置的索引模式。"
                     values[key] = env["services"][service].get(field, "")
                     items.append({"kind": "property", "property": key})
-            status = "；".join(f"{service}: {'已保存' if env['services'][service].get('has_secret') else '未保存'}"
-                              for service in SERVICE_FIELDS)
+            def credential_status(service: str) -> str:
+                saved = env["services"][service]
+                if not saved.get("url"):
+                    return "未配置"
+                if service == "loki" and saved.get("auth_type") == "none":
+                    return "无需认证"
+                return "已保存" if saved.get("has_secret") else "未保存"
+
+            status = "；".join(f"{service}: {credential_status(service)}" for service in SERVICE_FIELDS)
             items.extend([
                 {"kind": "tool", "tool": credential_tool(name), "description": "凭证状态：" + status},
-                {"kind": "tool", "tool": test_tool(name), "description": "以当前环境只读测试已配置的服务"},
+                {"kind": "tool", "tool": test_tool(name)},
             ])
             layout.append({"kind": "group", "title": f"{env['label'] or name}（{name}）", "items": items})
         return {"schema": {"type": "object", "properties": props}, "values": values, "layout": layout}

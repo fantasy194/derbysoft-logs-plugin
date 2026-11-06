@@ -19,7 +19,7 @@ URI = "ui://derbysoft-logs/settings.html"
 HIDDEN = {"ui": {"visibility": ["app"]}}
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
-mcp = MCPServer("DerbySoft Logs Settings", version="0.4.0")
+mcp = MCPServer("DerbySoft Logs Settings", version="0.4.1")
 
 # MCP SDK 2.3 validates SEP-2133 reverse-DNS identifiers in its Extension
 # helper; OpenAI's existing extension ID is `openai/settings`. Populate the

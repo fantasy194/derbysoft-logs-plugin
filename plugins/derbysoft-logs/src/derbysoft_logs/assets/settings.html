@@ -6,32 +6,28 @@
   <meta name="color-scheme" content="light dark">
   <title>DerbySoft Logs 配置中心</title>
   <style>
-    :root { color-scheme: light dark; --bg:#f6f8fc; --surface:#fff; --surface-muted:#f6f8fc; --text:#202a3b; --sub:#64748b; --border:#dce4ef; --accent:#315eea; --accent-hover:#2548bb; --accent-soft:#eef3ff; --success:#067647; --danger:#b42318; --shadow:0 8px 24px #1831530a; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#111827; --surface:#192334; --surface-muted:#202c40; --text:#edf2fb; --sub:#9daec5; --border:#344258; --accent:#8aa7ff; --accent-hover:#b4c5ff; --accent-soft:#283c64; --success:#5bd8a4; --danger:#ffaaa3; --shadow:none; } }
-    :root[data-theme="light"] { color-scheme:light; --bg:#f6f8fc; --surface:#fff; --surface-muted:#f6f8fc; --text:#202a3b; --sub:#64748b; --border:#dce4ef; --accent:#315eea; --accent-hover:#2548bb; --accent-soft:#eef3ff; --success:#067647; --danger:#b42318; --shadow:0 8px 24px #1831530a; }
-    :root[data-theme="dark"] { color-scheme:dark; --bg:#111827; --surface:#192334; --surface-muted:#202c40; --text:#edf2fb; --sub:#9daec5; --border:#344258; --accent:#8aa7ff; --accent-hover:#b4c5ff; --accent-soft:#283c64; --success:#5bd8a4; --danger:#ffaaa3; --shadow:none; }
+    :root { color-scheme:light dark; --bg:#f6f8fb; --surface:#fff; --muted:#f5f7fa; --text:#1d2838; --sub:#66758a; --border:#dde4ed; --accent:#285acb; --accent-soft:#eaf1ff; --danger:#b42318; --wash:radial-gradient(ellipse at 92% -8%,#d5e7fb 0%,transparent 40%),linear-gradient(155deg,#f7fafc,#f4f7fb); }
+    @media (prefers-color-scheme:dark) { :root { --bg:#111a27; --surface:#192435; --muted:#202d40; --text:#eaf0f8; --sub:#a5b2c3; --border:#344359; --accent:#a1bdff; --accent-soft:#233956; --danger:#ffaaa3; --wash:radial-gradient(ellipse at 92% -8%,#244366 0%,transparent 42%),linear-gradient(155deg,#121e2c,#111a27); } }
+    :root[data-theme="light"] { color-scheme:light; --bg:#f6f8fb; --surface:#fff; --muted:#f5f7fa; --text:#1d2838; --sub:#66758a; --border:#dde4ed; --accent:#285acb; --accent-soft:#eaf1ff; --danger:#b42318; --wash:radial-gradient(ellipse at 92% -8%,#d5e7fb 0%,transparent 40%),linear-gradient(155deg,#f7fafc,#f4f7fb); }
+    :root[data-theme="dark"] { color-scheme:dark; --bg:#111a27; --surface:#192435; --muted:#202d40; --text:#eaf0f8; --sub:#a5b2c3; --border:#344359; --accent:#a1bdff; --accent-soft:#233956; --danger:#ffaaa3; --wash:radial-gradient(ellipse at 92% -8%,#244366 0%,transparent 42%),linear-gradient(155deg,#121e2c,#111a27); }
     * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
-    main { width:min(100%,1020px); margin:auto; padding:28px 28px 100px; }
-    .eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--accent); font-size:12px; font-weight:700; letter-spacing:.04em; }
-    .eyebrow:before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; }
-    .intro { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:22px; }
-    h1 { margin:4px 0; font-size:25px; letter-spacing:-.03em; line-height:1.25; }
-    h2 { font-size:16px; line-height:1.35; margin:0; }
+    body { margin:0; min-height:100vh; background:var(--wash); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    main { width:min(100%,760px); margin:auto; padding:22px 24px 92px; }
+    .intro { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
+    h1 { margin:0; font-size:21px; letter-spacing:-.02em; line-height:1.25; }
+    h2 { font-size:14px; line-height:1.35; margin:0; }
     p { margin:0; }
-    .intro p, .group-description { color:var(--sub); }
-    .intro p { max-width:65ch; }
     button, input, select { font:inherit; }
-    button { cursor:pointer; border-radius:8px; min-height:36px; padding:7px 13px; font-weight:600; border:1px solid var(--border); color:var(--text); background:var(--surface); }
+    button { cursor:pointer; border-radius:8px; min-height:34px; padding:6px 12px; font-weight:600; border:1px solid var(--border); color:var(--text); background:var(--surface); }
     button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
     button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 28%,transparent); outline-offset:1px; }
     button:disabled { cursor:not-allowed; opacity:.55; }
     .primary { color:white; background:#315eea; border-color:#315eea; }
     .primary:hover:not(:disabled) { color:white; background:#2548bb; border-color:#2548bb; }
-    .card { background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow); border-radius:12px; margin:12px 0; overflow:hidden; }
-    .card-head { padding:17px 20px 0; }
-    .card-body { padding:16px 20px 20px; }
-    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin:10px 0; overflow:hidden; }
+    .card-head { padding:15px 16px 0; }
+    .card-body { padding:14px 16px 16px; }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px 16px; }
     .field { display:flex; flex-direction:column; gap:5px; min-width:0; }
     .field label { font-size:13px; font-weight:650; }
     .field small { color:var(--sub); line-height:1.4; overflow-wrap:anywhere; }
@@ -40,30 +36,37 @@
     input:disabled,select:disabled { opacity:.7; }
     .check { flex-direction:row; align-items:center; gap:8px; }
     .check input { width:17px; height:17px; accent-color:var(--accent); }
-    .actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:17px; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
     .actions:only-child { margin-top:0; }
     .action-wrap { display:flex; flex-direction:column; align-items:flex-start; max-width:100%; gap:4px; }
-    .action-wrap small { color:var(--sub); max-width:48ch; }
-    .result { border-radius:8px; padding:10px 12px; margin-top:14px; background:var(--surface-muted); white-space:pre-wrap; overflow-wrap:anywhere; color:var(--sub); }
+    .result { border-radius:8px; padding:10px 12px; margin-top:14px; background:var(--muted); white-space:pre-wrap; overflow-wrap:anywhere; color:var(--sub); }
     .result:empty { display:none; }
     .notice { border-radius:10px; margin:12px 0; padding:12px 14px; background:var(--accent-soft); color:var(--text); white-space:pre-line; }
     .notice.error { color:var(--danger); background:var(--surface); border:1px solid var(--danger); }
     .notice:empty { display:none; }
     .footer { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); }
-    .footer-inner { width:min(100%,1020px); margin:auto; padding:12px 28px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .footer-inner { width:min(100%,760px); margin:auto; padding:10px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
     .footer-status { color:var(--sub); font-size:13px; }
     .footer-buttons { display:flex; gap:9px; }
     .loading { color:var(--sub); padding:25px 2px; }
-    @media (max-width:620px) { main { padding:22px 16px 105px; } .intro { display:block; } .intro button { margin-top:14px; } .fields { grid-template-columns:1fr; } .card-head { padding:15px 15px 0; } .card-body { padding:14px 15px 16px; } .footer-inner { padding:10px 16px; } .footer-status { max-width:45%; } }
+    .picker-row { display:flex; gap:8px; align-items:end; }
+    .picker-row .field { flex:1; }
+    .picker-row button { flex:none; height:38px; }
+    .env-actions { display:flex; flex-wrap:wrap; gap:8px; margin:13px 0 2px; }
+    .service { border-top:1px solid var(--border); }
+    .service:first-child { border-top:0; }
+    .service summary { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; list-style:none; padding:13px 16px; font-weight:650; }
+    .service summary::-webkit-details-marker { display:none; }
+    .service summary::after { content:"›"; color:var(--sub); font-size:19px; font-weight:400; line-height:1; transform:rotate(90deg); }
+    .service[open] summary::after { transform:rotate(-90deg); }
+    .service .fields { padding:0 16px 16px; }
+    .empty { padding:20px 16px; color:var(--sub); }
+    @media (max-width:620px) { main { padding:18px 16px 88px; } .fields { grid-template-columns:1fr; } .footer-inner { padding:10px 16px; } .footer-status { max-width:43%; } }
   </style>
 </head>
 <body>
   <main>
-    <div class="eyebrow">DERBYSOFT LOGS</div>
-    <div class="intro">
-      <div><h1>日志连接配置</h1><p>管理环境、服务连接和默认索引。所有设置与插件原生设置共用；凭证通过单独的安全入口配置。</p></div>
-      <button type="button" id="reload">重新读取</button>
-    </div>
+    <div class="intro"><h1>日志设置</h1><button type="button" id="reload">刷新</button></div>
     <div id="notice" class="notice" role="status" aria-live="polite"></div>
     <form id="settings-form" novalidate><div id="groups" class="loading">正在连接配置服务…</div></form>
   </main>
@@ -77,7 +80,8 @@
     const host = window.parent;
     const pending = new Map();
     let nextId = 1, hostOrigin = null, initialized = false, busy = false;
-    let state = null, baseline = {}, draft = {};
+    let state = null, baseline = {}, draft = {}, selectedEnvironment = null, addingEnvironment = false;
+    const expandedServices = new Set(["opensearch"]);
     const form = document.getElementById("settings-form");
     const groupsNode = document.getElementById("groups");
     const notice = document.getElementById("notice");
@@ -136,7 +140,7 @@
     function diff() { const changes = {}; for (const key of Object.keys(draft)) if (!Object.is(draft[key], baseline[key])) changes[key] = draft[key]; return changes; }
     function showState() {
       const count = Object.keys(diff()).length;
-      footerStatus.textContent = busy ? "正在处理…" : !state ? "尚未连接" : count ? `有 ${count} 项未保存的更改` : "设置已同步";
+      footerStatus.textContent = busy ? "正在处理…" : !state ? "尚未连接" : count ? `${count} 项未保存` : "已保存";
       saveButton.disabled = busy || !state || !count;
       discardButton.disabled = busy || !state || !count;
       reloadButton.disabled = busy;
@@ -154,12 +158,15 @@
     function field(key, schema) {
       const wrapper = document.createElement("div"); wrapper.className = "field";
       const id = "field-" + key;
-      const label = document.createElement("label"); label.htmlFor = id; label.textContent = schema.title || key;
+      const label = document.createElement("label"); label.htmlFor = id;
+      label.textContent = (schema.title || key).replace(/^(OpenSearch|StreamLog|Loki) /, "");
       let control;
       if (Array.isArray(schema.enum)) {
         control = document.createElement("select");
         for (const value of schema.enum) {
-          const option = document.createElement("option"); option.value = String(value); option.textContent = value === "" ? "未设置" : String(value); control.appendChild(option);
+          const option = document.createElement("option"); option.value = String(value);
+          option.textContent = value === "" ? "未设置" : ({uat:"UAT",prod:"PROD",qa:"QA",dev:"DEV",custom:"自定义"}[value] || String(value));
+          control.appendChild(option);
         }
         if (!schema.enum.includes(draft[key])) {
           const option = document.createElement("option"); option.value = String(draft[key] ?? ""); option.textContent = String(draft[key] ?? "") + "（当前值）"; control.appendChild(option);
@@ -176,18 +183,27 @@
         else if (schema.type === "number") control.step = "any";
       }
       control.id = id; control.name = key; control.autocomplete = "off";
+      if (key === "new_environment_id") control.placeholder = "如 uat、prod";
       if (schema.type === "boolean") { control.checked = Boolean(draft[key]); wrapper.classList.add("check"); }
       else control.value = String(draft[key] ?? "");
       if ((state.schema.required || []).includes(key)) control.required = true;
+      const warning = document.createElement("small");
+      const changedConnection = () => {
+        if (!String(baseline[key] || "") || Object.is(draft[key], baseline[key])) { warning.textContent = ""; return; }
+        if (key.endsWith("__opensearch__url")) warning.textContent = "更改地址会移除旧凭证；未同时修改的默认索引也会清除。";
+        else if (key.endsWith("__url")) warning.textContent = "更改地址会移除旧凭证。";
+        else if (key.endsWith("__username") || key.endsWith("__auth_type")) warning.textContent = "更改后需要重新配置凭证。";
+      };
       const update = () => {
         if (schema.type === "boolean") draft[key] = control.checked;
         else if (schema.type === "number" || schema.type === "integer") draft[key] = control.value === "" ? "" : Number(control.value);
         else draft[key] = control.value;
-        setNotice(""); showState();
+        changedConnection(); setNotice(""); showState();
       };
       control.addEventListener("input", update); control.addEventListener("change", update);
       wrapper.appendChild(label); wrapper.appendChild(control);
-      if (typeof schema.description === "string" && schema.description) {
+      changedConnection(); wrapper.appendChild(warning);
+      if (key === "default_environment" && typeof schema.description === "string" && /当前默认设置无效|环境变量/.test(schema.description)) {
         const help = document.createElement("small"); help.textContent = schema.description; wrapper.appendChild(help);
       }
       return wrapper;
@@ -219,37 +235,80 @@
     function render() {
       groupsNode.replaceChildren(); groupsNode.className = "";
       const definitions = state.schema.properties || {};
-      const shown = new Set();
-      const layouts = Array.isArray(state.layout) ? [...state.layout] : [];
-      const listed = new Set(layouts.flatMap(group => (group.items || []).filter(item => item.kind === "property").map(item => item.property)));
-      const other = Object.keys(definitions).filter(key => !listed.has(key));
-      if (other.length) layouts.push({kind:"group", title:"其他设置", items:other.map(property => ({kind:"property", property}))});
-      for (const group of layouts) {
-        if (!group || group.kind !== "group" || !Array.isArray(group.items)) continue;
+      const layouts = Array.isArray(state.layout) ? state.layout : [];
+      const environmentGroups = layouts.flatMap(group => {
+        const action = (group.items || []).find(item => item.kind === "tool" && typeof item.tool === "string" && item.tool.startsWith("configure_credentials__"));
+        return action ? [{id:action.tool.slice("configure_credentials__".length), group}] : [];
+      });
+      const newGroup = layouts.find(group => (group.items || []).some(item => item.property === "new_environment_id"));
+      const ids = environmentGroups.map(item => item.id);
+      if (!ids.includes(selectedEnvironment)) selectedEnvironment = ids.includes(draft.default_environment) ? draft.default_environment : (ids[0] || null);
+      if (!ids.length) addingEnvironment = true;
+
+      function section(title) {
         const card = document.createElement("section"); card.className = "card";
-        const head = document.createElement("div"); head.className = "card-head";
-        const heading = document.createElement("h2"); heading.textContent = group.title || "设置"; head.appendChild(heading);
         const body = document.createElement("div"); body.className = "card-body";
+        if (title) { const head = document.createElement("div"); head.className = "card-head"; const heading = document.createElement("h2"); heading.textContent = title; head.appendChild(heading); card.appendChild(head); }
+        card.appendChild(body); groupsNode.appendChild(card); return body;
+      }
+      function appendAction(container, item) {
+        const button = document.createElement("button"); button.type = "button"; button.textContent = labelForAction(item);
+        button.addEventListener("click", () => runAction(item.tool)); container.appendChild(button);
+      }
+      const nav = section("");
+      if (ids.length) {
+        const row = document.createElement("div"); row.className = "picker-row";
+        const wrapper = document.createElement("div"); wrapper.className = "field";
+        const label = document.createElement("label"); label.htmlFor = "active-environment"; label.textContent = "编辑环境";
+        const select = document.createElement("select"); select.id = "active-environment";
+        for (const {id, group} of environmentGroups) {
+          const option = document.createElement("option"); option.value = id; option.textContent = group.title || id; select.appendChild(option);
+        }
+        select.value = selectedEnvironment;
+        select.addEventListener("change", () => { selectedEnvironment = select.value; addingEnvironment = false; render(); });
+        wrapper.append(label,select); row.appendChild(wrapper);
+        const add = document.createElement("button"); add.type = "button"; add.textContent = addingEnvironment ? "取消" : "新增";
+        add.addEventListener("click", () => { addingEnvironment = !addingEnvironment; render(); }); row.appendChild(add); nav.appendChild(row);
+      }
+      if (definitions.default_environment) {
+        const defaultField = field("default_environment", definitions.default_environment);
+        if (ids.length) defaultField.style.marginTop = "13px";
+        nav.appendChild(defaultField);
+      }
+      if (selectedEnvironment && !addingEnvironment) {
+        const group = environmentGroups.find(item => item.id === selectedEnvironment).group;
+        const actionRow = document.createElement("div"); actionRow.className = "env-actions";
+        for (const item of group.items) if (item.kind === "tool" && typeof item.tool === "string") appendAction(actionRow, item);
+        nav.appendChild(actionRow);
+      }
+      if (addingEnvironment && newGroup) {
+        const body = section("新增环境");
         const fields = document.createElement("div"); fields.className = "fields";
         const actions = document.createElement("div"); actions.className = "actions";
-        const resultNode = document.createElement("div"); resultNode.className = "result"; resultNode.setAttribute("role", "status");
-        for (const item of group.items) {
-          if (!item) continue;
-          if (item.kind === "property" && definitions[item.property] && !shown.has(item.property)) {
-            shown.add(item.property); fields.appendChild(field(item.property, definitions[item.property]));
-          } else if (item.kind === "tool" && typeof item.tool === "string" && item.tool !== "open_log_settings") {
-            const wrap = document.createElement("div"); wrap.className = "action-wrap";
-            const button = document.createElement("button"); button.type = "button"; button.textContent = labelForAction(item);
-            button.addEventListener("click", () => runAction(item.tool, resultNode)); wrap.appendChild(button);
-            if (typeof item.description === "string" && item.description) { const description = document.createElement("small"); description.textContent = item.description; wrap.appendChild(description); }
-            actions.appendChild(wrap);
-          }
+        for (const item of newGroup.items) {
+          if (item.kind === "property" && definitions[item.property]) fields.appendChild(field(item.property, definitions[item.property]));
+          else if (item.kind === "tool" && typeof item.tool === "string") appendAction(actions, item);
         }
-        if (fields.children.length) body.appendChild(fields);
-        if (actions.children.length) body.appendChild(actions);
-        body.appendChild(resultNode); card.appendChild(head); card.appendChild(body); groupsNode.appendChild(card);
+        body.append(fields, actions);
+      } else if (selectedEnvironment) {
+        const group = environmentGroups.find(item => item.id === selectedEnvironment).group;
+        const prefix = `env__${selectedEnvironment}__`;
+        const serviceCard = document.createElement("section"); serviceCard.className = "card";
+        for (const [kind, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"], ["identity", "环境信息"]]) {
+          const keys = group.items.filter(item => item.kind === "property" && typeof item.property === "string" && item.property.startsWith(prefix) &&
+            (kind === "identity" ? ["label", "kind"].includes(item.property.slice(prefix.length)) : item.property.startsWith(prefix + kind + "__")))
+            .map(item => item.property).filter(key => definitions[key]);
+          if (!keys.length) continue;
+          const details = document.createElement("details"); details.className = "service"; details.open = expandedServices.has(kind);
+          const summary = document.createElement("summary"); summary.textContent = title; details.appendChild(summary);
+          const fields = document.createElement("div"); fields.className = "fields";
+          for (const key of keys) fields.appendChild(field(key, definitions[key]));
+          details.appendChild(fields);
+          details.addEventListener("toggle", () => { if (details.open) expandedServices.add(kind); else expandedServices.delete(kind); });
+          serviceCard.appendChild(details);
+        }
+        if (serviceCard.children.length) groupsNode.appendChild(serviceCard);
       }
-      if (!groupsNode.children.length) { groupsNode.className = "loading"; groupsNode.textContent = "没有可显示的设置。"; }
       showState();
     }
     function validateState(data) {
@@ -257,53 +316,68 @@
       for (const key of Object.keys(data.schema.properties)) if (!(key in data.values)) throw new Error("配置服务缺少设置值：" + key);
       return data;
     }
-    async function readSettings() {
+    async function readSettings(preserveDraft = false) {
+      const previous = preserveDraft ? diff() : {};
       const data = validateState(await callTool("settings_read"));
-      state = data; baseline = {...data.values}; draft = {...data.values}; render();
+      state = data; baseline = {...data.values}; draft = {...data.values};
+      for (const [key, value] of Object.entries(previous)) if (key in data.schema.properties) draft[key] = value;
+      render();
     }
-    async function saveChanges() {
-      const changes = diff(); if (!Object.keys(changes).length) return;
-      if (!form.reportValidity()) throw new Error("请检查标记的设置项。");
+    async function saveChanges(filter = () => true) {
+      const allChanges = diff();
+      const changes = Object.fromEntries(Object.entries(allChanges).filter(([key]) => filter(key)));
+      if (!Object.keys(changes).length) return;
+      for (const key of Object.keys(changes)) {
+        const control = document.getElementById("field-" + key);
+        if (control && !control.checkValidity()) { control.closest("details")?.setAttribute("open", ""); control.reportValidity(); throw new Error("请检查标记的设置项。"); }
+      }
       const updated = await callTool("settings_update", {set:changes});
       if (!updated || !updated.values || typeof updated.values !== "object" || Array.isArray(updated.values)) throw new Error("配置服务未确认保存，已保留未保存的修改。");
-      // Only clear dirty state after the server confirms every changed value.
-      for (const [key, value] of Object.entries(changes)) {
-        if (!(key in updated.values) || !Object.is(updated.values[key], value)) throw new Error("配置服务返回的值与提交值不一致，已保留本地修改；请重新读取后确认。");
+      // The server may normalize a value (for example, strip a trailing slash).
+      // It must acknowledge each submitted key; its saved values are authoritative.
+      for (const key of Object.keys(changes)) {
+        if (!(key in updated.values)) throw new Error("配置服务未确认全部修改，已保留本地修改；请重新读取后确认。");
       }
       baseline = {...updated.values}; draft = {...updated.values};
+      for (const [key, value] of Object.entries(allChanges)) if (!(key in changes) && key in updated.values) draft[key] = value;
     }
-    async function runAction(name, resultNode) {
+    async function runAction(name) {
       if (busy || !state) return;
       setNotice(""); setBusy(true);
       try {
-        await saveChanges();
+        const boundId = name.startsWith("configure_credentials__") ? name.slice("configure_credentials__".length) :
+          name.startsWith("test_connection__") ? name.slice("test_connection__".length) : null;
+        await saveChanges(key => boundId ? key.startsWith(`env__${boundId}__`) : key.startsWith("new_environment_"));
         const result = await callTool(name);
-        await readSettings();
+        if ((name === "create_environment" || name === "migrate_legacy_environment") && typeof result.environment === "string") {
+          selectedEnvironment = result.environment; addingEnvironment = false;
+        }
+        await readSettings(true);
         // Re-render replaces the previous group node. A shared notice keeps
         // action results visible even when the action changes the schema.
         setNotice(formatResult(result, name));
-      } catch (error) { resultNode.textContent = describeError(error); setNotice(describeError(error), true); }
+      } catch (error) { setNotice(describeError(error), true); }
       finally { setBusy(false); }
     }
     form.addEventListener("submit", async event => {
       event.preventDefault(); if (busy || !state) return; setNotice(""); setBusy(true);
-      try { await saveChanges(); await readSettings(); setNotice("设置已保存。"); }
+      try { await saveChanges(); await readSettings(); }
       catch (error) { setNotice(describeError(error), true); }
       finally { setBusy(false); }
     });
-    discardButton.addEventListener("click", () => { if (!busy && state) { draft = {...baseline}; render(); setNotice("已放弃未保存的更改。"); } });
+    discardButton.addEventListener("click", () => { if (!busy && state) { draft = {...baseline}; render(); setNotice(""); } });
     reloadButton.addEventListener("click", async () => {
       if (busy) return;
       if (Object.keys(diff()).length) { setNotice("请先保存或放弃未保存的修改，再重新读取。", true); return; }
       setNotice(""); setBusy(true);
-      try { await readSettings(); setNotice("已重新读取当前设置。"); }
+      try { await readSettings(); }
       catch (error) { setNotice(describeError(error), true); }
       finally { setBusy(false); }
     });
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.1"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
         await readSettings();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }
