@@ -4,6 +4,8 @@ DerbySoft 内部日志调查插件：结合业务 PerfLog、StreamLog 请求/响
 
 本仓库包含 Codex 本地插件及其 marketplace 清单。业务字段和 process 定义面向获准访问公司内部资料的同事，请使用私有仓库分发。仓库不包含个人凭证和本机环境配置。
 
+开发与维护前阅读 [AGENTS.md](AGENTS.md)，了解业务语义、配置约定、验证方法与分发边界。
+
 ## 安装
 
 需要已安装 Codex 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并能访问此私有 Git 仓库及公司日志服务。`uv` 使用锁文件安装依赖，并管理兼容的 Python 运行时；首次安装依赖可能需要访问包仓库。
