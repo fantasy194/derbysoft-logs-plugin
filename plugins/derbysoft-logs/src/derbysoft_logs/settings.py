@@ -1,7 +1,7 @@
 """Single source of truth for the native settings screen and MCP App fallback.
 
-Only public connection metadata is exposed. Credentials are managed by a
-separate out-of-band flow and never enter these schema values or tool inputs.
+Only public connection metadata is exposed. The App submits credentials through
+the encrypted save flow; plaintext never enters these schema values or tool inputs.
 """
 from __future__ import annotations
 

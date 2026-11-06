@@ -13,7 +13,7 @@
 | --- | --- |
 | 环境、默认索引、凭证引用与配置事务 | [config.py](plugins/derbysoft-logs/src/derbysoft_logs/config.py) |
 | 原生设置 schema、值、布局和 MCP 能力声明 | [settings.py](plugins/derbysoft-logs/src/derbysoft_logs/settings.py)、[settings_server.py](plugins/derbysoft-logs/src/derbysoft_logs/settings_server.py) |
-| 备用设置页面与本机凭证页面 | [assets](plugins/derbysoft-logs/src/derbysoft_logs/assets)、[credential_portal.py](plugins/derbysoft-logs/src/derbysoft_logs/credential_portal.py) |
+| 备用设置页面与凭证加密 | [assets](plugins/derbysoft-logs/src/derbysoft_logs/assets)、[settings_server.py](plugins/derbysoft-logs/src/derbysoft_logs/settings_server.py) |
 | 官方 OpenSearch MCP 的隔离路由 | [opensearch_server.py](plugins/derbysoft-logs/src/derbysoft_logs/opensearch_server.py)、[cli.py](plugins/derbysoft-logs/src/derbysoft_logs/cli.py) |
 | StreamLog 与 PerfLog 联查 | [stream.py](plugins/derbysoft-logs/src/derbysoft_logs/stream.py)、[server.py](plugins/derbysoft-logs/src/derbysoft_logs/server.py) |
 | Loki console 查询 | [loki.py](plugins/derbysoft-logs/src/derbysoft_logs/loki.py)、[loki_server.py](plugins/derbysoft-logs/src/derbysoft_logs/loki_server.py) |
@@ -40,12 +40,12 @@
 
 ## 凭证、并发与删除
 
-- 密码和 token 只在本机凭证页面或明确的无界面凭证入口输入，保存到系统凭证库。不得进入聊天、MCP 设置参数或返回值、profile JSON、命令行、测试报告、截图、仓库或分享包；凭证库不可用时不回退明文。
+- 密码和 token 可在 MCP App 的环境服务表单输入，与连接字段一起保存；通过 WebCrypto RSA-OAEP SHA-256 和 AES-256-GCM 封装后以密文交给本机设置服务，再保存到系统凭证库。不得把明文放入聊天、MCP 参数或返回值、profile JSON、命令行、测试报告、截图、仓库或分享包；凭证库不可用时不回退明文。不要把密文通道描述成宿主绝不可能访问输入内容。
 - 凭证按钮固定具体环境，不在提交时重新读取默认值。认证按服务和环境隔离，不自动复用其他服务或环境的凭证。端点、账号或认证模式变化时解除旧凭证绑定；OpenSearch 地址改变且未同时提交新索引时清除旧默认索引。
-- 本机凭证页面限定 loopback、短时 token、Host/Origin 校验和无缓存；不要把带授权 token 的页面 URL 返回给模型。环境变量提供的虚拟环境不得被页面隐式写成不完整的持久配置。
+- 已有凭证字段留空表示保持原凭证；端点、账号或认证模式变更时原绑定解除，同次保存可提供新凭证。密文封装必须绑定目标环境及版本，失败不得写入其他环境。环境变量提供的虚拟环境不得被页面隐式写成不完整的持久配置。
 - 配置写入使用现有跨进程可重入锁、原子文件替换和失败回滚。多环境更新先完成全部输入校验，再开始写入；回滚不完整时明确报告，不能声称操作完全成功或完全未发生。
 - 删除先显示目标环境，再输入完整名称确认。只删除目标 profile 及其引用的凭证；删除默认环境时清空默认，不自动选择其他环境。不得用删除环境作为修复捷径。
-- 新建 profile 的内部 `instance_id` 在后续保存中保持稳定；同名重建必须获得新值，使旧凭证页面失效。这个内部标识不成为用户配置项。
+- 新建 profile 的内部 `instance_id` 在后续保存中保持稳定；同名重建必须获得新值，使旧环境的凭证提交失效。这个内部标识不成为用户配置项。
 - 删除成功后清理对应动态工具、环境选项和无效的默认草稿，保留其他环境未保存修改。若删除已成功而刷新失败，只重试读取，不再次发送删除请求。
 
 ## MCP 与验证

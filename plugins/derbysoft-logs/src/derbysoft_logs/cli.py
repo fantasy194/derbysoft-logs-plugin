@@ -121,9 +121,11 @@ def _check_default_index(environment: str) -> dict:
     try:
         configured_index = get_default_index(environment)
     except ConfigurationError:
-        return {"index_query_accessible": None, "index_query_note": "Default index configuration is invalid."}
+        return {"index_query_status": "invalid_index", "index_query_accessible": None,
+                "index_query_note": "Default index configuration is invalid."}
     if not configured_index:
-        return {"index_query_accessible": None, "index_query_note": "No default index configured; no index search was attempted."}
+        return {"index_query_status": "missing_default_index", "index_query_accessible": None,
+                "index_query_note": "No default index configured; no index search was attempted."}
     output = {"index": configured_index, "index_environment": environment, "index_source": "default"}
 
     async def search():
@@ -155,15 +157,23 @@ def _check_default_index(environment: str) -> dict:
             if not ok:
                 raise response
     except TimeoutError:
-        return {**output, "index_query_accessible": None, "index_query_note": "Default index query timed out after 30 seconds."}
+        return {**output, "index_query_status": "timeout", "index_query_accessible": None,
+                "index_query_note": "Default index query timed out after 30 seconds."}
     except Exception as exc:
         # Do not expose upstream error bodies, connection details or credentials.
-        denied = bool(re.search(r"(?<!\d)(401|403)(?!\d)|security_exception", str(exc), re.IGNORECASE))
-        return {**output, "index_query_accessible": False if denied else None,
-                "index_query_note": ("Default index query was denied; check index search permissions." if denied
-                                     else "Default index query failed; check connection and index search permissions.")}
+        message = str(exc)
+        if re.search(r"(?<!\d)401(?!\d)|authentication_?exception|unauthori[sz]ed", message, re.IGNORECASE):
+            code, accessible, note = "unauthorized", False, "Default index query authentication failed; check credentials."
+        elif re.search(r"(?<!\d)403(?!\d)|security_exception", message, re.IGNORECASE):
+            code, accessible, note = "forbidden", False, "Default index query was denied; check index search permissions."
+        elif re.search(r"index_?not_?found_?exception|no such index", message, re.IGNORECASE):
+            code, accessible, note = "index_not_found", None, "The configured index or index pattern was not found."
+        else:
+            code, accessible, note = "query_failed", None, "Default index query failed; check connection and index search permissions."
+        return {**output, "index_query_status": code, "index_query_accessible": accessible, "index_query_note": note}
     if not isinstance(response, dict) or response.get("environment") != environment:
-        return {**output, "index_query_accessible": None, "index_query_note": "Index query returned an invalid environment or response."}
+        return {**output, "index_query_status": "invalid_response", "index_query_accessible": None,
+                "index_query_note": "Index query returned an invalid environment or response."}
     output["index"] = response.get("index", configured_index)
     body = response.get("result")
     shards = body.get("_shards") if isinstance(body, dict) else None
@@ -171,14 +181,24 @@ def _check_default_index(environment: str) -> dict:
             or not isinstance(shards.get("total"), int) or shards["total"] < 0
             or isinstance(shards.get("failed"), bool) or not isinstance(shards.get("failed"), int)
             or not 0 <= shards["failed"] <= shards["total"]):
-        return {**output, "index_query_accessible": None, "index_query_note": "Index query returned no shard information; access is not verified."}
+        return {**output, "index_query_status": "invalid_response", "index_query_accessible": None,
+                "index_query_note": "Index query returned no shard information; access is not verified."}
     total = shards["total"]
     output["index_matched_shards"] = total
+    output["index_failed_shards"] = shards["failed"]
+    if "timed_out" in body and not isinstance(body["timed_out"], bool):
+        return {**output, "index_query_status": "invalid_response", "index_query_accessible": None,
+                "index_query_note": "Index query returned an invalid timeout status; access is not verified."}
+    if body.get("timed_out"):
+        return {**output, "index_query_status": "timeout", "index_query_accessible": None,
+                "index_query_note": "The index search timed out; access is not fully verified."}
     if total == 0:
-        return {**output, "index_query_accessible": None, "index_query_note": "The search returned zero shards; no matching indices were verified."}
-    if body.get("timed_out") or shards["failed"]:
-        return {**output, "index_query_accessible": None, "index_query_note": "The index search timed out or had failed shards; access is only partially verified."}
-    return {**output, "index_query_accessible": True,
+        return {**output, "index_query_status": "no_shards", "index_query_accessible": None,
+                "index_query_note": "The search returned zero shards; no matching indices were verified."}
+    if shards["failed"]:
+        return {**output, "index_query_status": "partial", "index_query_accessible": None,
+                "index_query_note": "The index search had failed shards; access is only partially verified."}
+    return {**output, "index_query_status": "ok", "index_query_accessible": True,
             "index_query_note": "Read-only match-none search succeeded; log ingestion and individual documents were not checked."}
 
 
@@ -192,21 +212,29 @@ def doctor(check_network: bool = False, environment: str | None = None) -> dict:
             result[section] = {"configured": True}
         except ConfigurationError:
             result[section] = {"configured": False}
+    result["opensearch"]["index_query_status"] = ("not_checked" if result["opensearch"]["configured"] else "not_configured")
     if check_network and result["opensearch"]["configured"]:
-        import httpx
-        conf = profile["opensearch"]
-        try:
-            with httpx.Client(timeout=20, verify=True, follow_redirects=False) as client:
-                response = client.get(conf["url"] + "/", auth=(conf["username"], conf["password"]))
-            result["opensearch"]["http_status"] = response.status_code
-            result["opensearch"]["reachable"] = True
-            result["opensearch"]["root_accessible"] = response.status_code == 200
-            if response.status_code == 403:
-                result["opensearch"]["note"] = "Server reachable, root metadata denied; specific index search permissions may differ."
-        except httpx.HTTPError:
-            result["opensearch"]["reachable"] = False
-            result["opensearch"]["error"] = "Connection, timeout or TLS failure"
         result["opensearch"].update(_check_default_index(name))
+        if result["opensearch"]["index_query_status"] in {"ok", "no_shards", "partial", "unauthorized", "forbidden", "index_not_found"}:
+            # The index search itself reached the service; root metadata permissions
+            # are irrelevant and no broader permission probe is needed.
+            result["opensearch"]["reachable"] = True
+        else:
+            # A root probe provides connectivity context only. It never changes
+            # the index result or establishes query permissions.
+            import httpx
+            conf = profile["opensearch"]
+            try:
+                with httpx.Client(timeout=20, verify=True, follow_redirects=False) as client:
+                    response = client.get(conf["url"] + "/", auth=(conf["username"], conf["password"]))
+                result["opensearch"]["http_status"] = response.status_code
+                result["opensearch"]["reachable"] = True
+                result["opensearch"]["root_accessible"] = response.status_code == 200
+                if response.status_code == 403:
+                    result["opensearch"]["note"] = "Server reachable, root metadata denied; specific index search permissions may differ."
+            except httpx.HTTPError:
+                result["opensearch"]["reachable"] = False
+                result["opensearch"]["error"] = "Connection, timeout or TLS failure"
     if check_network and result["loki"]["configured"]:
         import time
         import httpx

@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "derbysoft-logs"
-version = "0.4.4"
+version = "0.5.0"
 description = "DerbySoft business log investigation tools for Codex"
 requires-python = ">=3.11"
 dependencies = [
   "mcp==2.3.0",
   "httpx>=0.28,<1",
   "keyring>=25,<26",
+  "cryptography>=46,<51",
   "opensearch-mcp-server-py==0.12.0",
 ]
 

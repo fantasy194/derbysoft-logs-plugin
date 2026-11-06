@@ -67,6 +67,13 @@
     dialog .danger:hover:not(:disabled) { color:#fff; background:#912018; border-color:#912018; }
     dialog .dialog-error { color:var(--danger); font-size:13px; overflow-wrap:anywhere; }
     dialog .dialog-error:empty { display:none; }
+    .result-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .result-environment { color:var(--sub); font-size:13px; overflow-wrap:anywhere; }
+    .service-result { border:1px solid var(--border); border-radius:9px; margin-top:10px; padding:11px 12px; }
+    .service-result h3 { margin:0; font-size:13px; }
+    .service-result p { margin:4px 0 0; font-size:13px; color:var(--sub); overflow-wrap:anywhere; }
+    .service-result p.problem { color:var(--danger); }
+    .secret-field { grid-column:1/-1; }
     .service { border-top:1px solid var(--border); }
     .service:first-child { border-top:0; }
     .service summary { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; list-style:none; padding:13px 16px; font-weight:650; }
@@ -97,14 +104,20 @@
     <p id="delete-error" class="dialog-error" role="alert"></p>
     <div class="dialog-actions"><button type="button" id="delete-cancel">取消</button><button type="button" id="delete-submit" class="danger" disabled>删除环境</button></div>
   </dialog>
+  <dialog id="connection-dialog" aria-labelledby="connection-title">
+    <div class="result-heading"><h2 id="connection-title">连接结果</h2><span id="connection-environment" class="result-environment"></span></div>
+    <div id="connection-results"></div>
+    <div class="dialog-actions"><button type="button" id="connection-close">关闭</button></div>
+  </dialog>
   <script>
   (() => {
     "use strict";
     const host = window.parent;
     const pending = new Map();
     let nextId = 1, hostOrigin = null, initialized = false, busy = false;
-    let state = null, baseline = {}, draft = {}, selectedEnvironment = null, addingEnvironment = false, syncNeeded = false;
-    let deletePreview = null, queuedPreview = null, deleteInFlight = false;
+    let state = null, baseline = {}, draft = {}, selectedEnvironment = null, addingEnvironment = false, syncNeeded = false, revisionSnapshot = null;
+    let secretDraft = Object.create(null);
+    let deletePreview = null, queuedAction = null, deleteInFlight = false;
     const expandedServices = new Set(["opensearch"]);
     const form = document.getElementById("settings-form");
     const groupsNode = document.getElementById("groups");
@@ -120,12 +133,18 @@
     const deleteError = document.getElementById("delete-error");
     const deleteCancel = document.getElementById("delete-cancel");
     const deleteSubmit = document.getElementById("delete-submit");
+    const connectionDialog = document.getElementById("connection-dialog");
+    const connectionEnvironment = document.getElementById("connection-environment");
+    const connectionResults = document.getElementById("connection-results");
+    const connectionClose = document.getElementById("connection-close");
 
     function send(message) { host.postMessage(message, hostOrigin && hostOrigin !== "null" ? hostOrigin : "*"); }
+    class ToolFailure extends Error {}
+    class TransportFailure extends Error {}
     function request(method, params, timeoutMs = 30000) {
       const id = nextId++;
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => { pending.delete(id); reject(new Error("连接超时，请重新读取或在原生设置中重试。")); }, timeoutMs);
+        const timer = setTimeout(() => { pending.delete(id); reject(new TransportFailure("连接超时，请重新读取或在原生设置中重试。")); }, timeoutMs);
         pending.set(id, {resolve, reject, timer, method});
         send({jsonrpc:"2.0", id, method, params});
       });
@@ -148,13 +167,13 @@
           hostOrigin = event.origin;
         }
         pending.delete(message.id); clearTimeout(item.timer);
-        if (message.error) item.reject(new Error(String(message.error.message || "请求失败")));
+        if (message.error) item.reject(new TransportFailure(String(message.error.message || "请求失败")));
         else item.resolve(message.result);
       } else if (message.method === "ui/notifications/tool-result") {
-        const preview = parseDeletePreview(message.params);
-        if (!preview) return;
-        if (!initialized || !state) queuedPreview = {preview, origin:event.origin};
-        else openDeleteDialog(preview);
+        const action = parseUiAction(message.params);
+        if (!action) return;
+        if (!initialized || !state) queuedAction = {action, origin:event.origin};
+        else dispatchUiAction(action);
       } else if (initialized && message.method === "ui/notifications/host-context-changed") setTheme(message.params);
     });
 
@@ -164,7 +183,7 @@
       if (!result || typeof result !== "object") throw new Error("配置服务返回了无效响应。");
       if (result.isError) {
         const message = (result.content || []).filter(x => x && x.type === "text").map(x => x.text).join(" ");
-        throw new Error(message || "配置服务拒绝了请求。");
+        throw new ToolFailure(message || "配置服务拒绝了请求。");
       }
       if (result.structuredContent && typeof result.structuredContent === "object") return result.structuredContent;
       for (const item of result.content || []) if (item && item.type === "text") {
@@ -181,13 +200,33 @@
           typeof value.default_environment !== "boolean") return null;
       return {environment:value.environment, default_environment:value.default_environment};
     }
+    function parseUiAction(result) {
+      const preview = parseDeletePreview(result);
+      if (preview) return {action:"confirm_delete", ...preview};
+      const value = result && !result.isError && result.structuredContent;
+      if (!value || typeof value !== "object" || !["edit_environment", "connection_result"].includes(value.action) ||
+          typeof value.environment !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(value.environment)) return null;
+      return value;
+    }
+    function knownEnvironment(id) {
+      return Boolean(state && (state.layout || []).some(group => (group.items || []).some(item => item.kind === "tool" && item.tool === "configure_credentials__" + id)));
+    }
+    function dispatchUiAction(action) {
+      if (!state || !initialized || syncNeeded || deleteDialog.open || connectionDialog.open) { queuedAction = {action, origin:hostOrigin}; return; }
+      if (!knownEnvironment(action.environment)) { setNotice("该环境不存在或设置已变更，请刷新后重试。", true); return; }
+      if (action.action === "confirm_delete") openDeleteDialog(action);
+      else if (action.action === "edit_environment") {
+        selectedEnvironment = action.environment; addingEnvironment = false; expandedServices.add("opensearch"); render();
+        requestAnimationFrame(() => document.getElementById("secret-" + action.environment + "-opensearch")?.focus());
+      } else if (action.action === "connection_result") openConnectionDialog(action);
+    }
     function openDeleteDialog(preview) {
-      if (!state || syncNeeded) { queuedPreview = {preview, origin:hostOrigin}; return; }
+      if (!state || syncNeeded) { queuedAction = {action:{action:"confirm_delete", ...preview}, origin:hostOrigin}; return; }
       const exists = (state.layout || []).some(group => (group.items || []).some(item => item.kind === "tool" && item.tool === "request_delete__" + preview.environment));
       if (!exists) { setNotice("该环境不存在或设置已变更，请刷新后重试。", true); return; }
       if (deleteDialog.open) {
         if (deletePreview && deletePreview.environment === preview.environment) return;
-        queuedPreview = {preview, origin:hostOrigin}; return;
+        queuedAction = {action:{action:"confirm_delete", ...preview}, origin:hostOrigin}; return;
       }
       deletePreview = preview;
       deleteName.textContent = preview.environment;
@@ -196,19 +235,26 @@
       deleteConfirmation.value = ""; deleteError.textContent = ""; deleteSubmit.disabled = true;
       deleteDialog.showModal(); deleteConfirmation.focus();
     }
-    function flushDeletePreview() {
-      if (!queuedPreview || !initialized || !state || syncNeeded || deleteDialog.open) return;
-      const queued = queuedPreview; queuedPreview = null;
-      if (queued.origin === hostOrigin) openDeleteDialog(queued.preview);
+    function flushUiAction() {
+      if (!queuedAction || !initialized || !state || syncNeeded || deleteDialog.open || connectionDialog.open) return;
+      const queued = queuedAction; queuedAction = null;
+      if (queued.origin === hostOrigin) dispatchUiAction(queued.action);
     }
     function diff() { const changes = {}; for (const key of Object.keys(draft)) if (!Object.is(draft[key], baseline[key])) changes[key] = draft[key]; return changes; }
+    function secretCount() { return Object.values(secretDraft).reduce((count, services) => count + Object.values(services).filter(Boolean).length, 0); }
+    function environmentHasChanges(environment) {
+      return Object.keys(diff()).some(key => environmentForField(key) === environment) || Object.values(secretDraft[environment] || {}).some(Boolean);
+    }
     function showState() {
-      const count = Object.keys(diff()).length;
+      const count = Object.keys(diff()).length + secretCount();
       footerStatus.textContent = busy ? "正在处理…" : syncNeeded ? "请刷新设置" : !state ? "尚未连接" : count ? `${count} 项未保存` : "已保存";
       saveButton.disabled = busy || syncNeeded || !state || !count;
       discardButton.disabled = busy || syncNeeded || !state || !count;
       reloadButton.disabled = busy;
       for (const element of groupsNode.querySelectorAll("input,select,button")) element.disabled = busy || syncNeeded;
+      for (const button of groupsNode.querySelectorAll("button[data-test-environment]")) {
+        button.textContent = environmentHasChanges(button.dataset.testEnvironment) ? "保存并测试" : "测试连接";
+      }
     }
     function setBusy(value) { busy = value; showState(); }
     function labelForAction(item) {
@@ -254,14 +300,18 @@
       const warning = document.createElement("small");
       const changedConnection = () => {
         if (!String(baseline[key] || "") || Object.is(draft[key], baseline[key])) { warning.textContent = ""; return; }
-        if (key.endsWith("__opensearch__url")) warning.textContent = "更改地址会移除旧凭证；未同时修改的默认索引也会清除。";
-        else if (key.endsWith("__url")) warning.textContent = "更改地址会移除旧凭证。";
-        else if (key.endsWith("__username") || key.endsWith("__auth_type")) warning.textContent = "更改后需要重新配置凭证。";
+        if (key.endsWith("__opensearch__url")) warning.textContent = "更改地址后需重新输入已保存的凭证；未同时修改的默认索引也会清除。";
+        else if (key.endsWith("__url") || key.endsWith("__username") || key.endsWith("__auth_type")) warning.textContent = "更改后需重新输入已保存的凭证。";
       };
       const update = () => {
         if (schema.type === "boolean") draft[key] = control.checked;
         else if (schema.type === "number" || schema.type === "integer") draft[key] = control.value === "" ? "" : Number(control.value);
         else draft[key] = control.value;
+        if (key.endsWith("__loki__auth_type")) {
+          const environment = environmentForField(key);
+          const input = document.getElementById(`secret-${environment}-loki`);
+          if (input) input.placeholder = draft[key] === "none" ? "无需认证，请留空" : state.metadata?.environments?.[environment]?.loki?.has_secret ? "已保存，留空保持" : "未设置";
+        }
         changedConnection(); setNotice(""); showState();
       };
       control.addEventListener("input", update); control.addEventListener("change", update);
@@ -272,28 +322,59 @@
       }
       return wrapper;
     }
+    function secretField(environment, service) {
+      const wrapper = document.createElement("div"); wrapper.className = "field secret-field";
+      const id = `secret-${environment}-${service}`;
+      const label = document.createElement("label"); label.htmlFor = id;
+      const mode = draft[`env__${environment}__loki__auth_type`] || "basic";
+      label.textContent = service === "streamlog" ? "Authorization" : service === "loki" ? "密码 / Token" : "密码";
+      const input = document.createElement("input"); input.type = "password"; input.id = id; input.autocomplete = "new-password"; input.maxLength = 4096;
+      const hasSecret = state.metadata?.environments?.[environment]?.[service]?.has_secret;
+      input.placeholder = service === "loki" && mode === "none" ? "无需认证，请留空" : hasSecret ? "已保存，留空保持" : "未设置";
+      input.value = secretDraft[environment]?.[service] || "";
+      input.addEventListener("input", () => {
+        if (!secretDraft[environment]) secretDraft[environment] = Object.create(null);
+        if (input.value) secretDraft[environment][service] = input.value;
+        else { delete secretDraft[environment][service]; if (!Object.keys(secretDraft[environment]).length) delete secretDraft[environment]; }
+        setNotice(""); showState();
+      });
+      wrapper.append(label, input); return wrapper;
+    }
     function formatResult(result, action) {
       const environment = typeof result.environment === "string" ? result.environment : "当前环境";
-      if (action.startsWith("configure_credentials__")) {
-        return result.opened ? `已为 ${environment} 打开凭证配置页面。请在该页面完成输入。` : "未能打开凭证配置页面，请重试。";
-      }
       if (action === "create_environment") return `已创建环境 ${environment}。`;
-      if (action.startsWith("test_connection__")) {
-        const lines = [`${environment} 连接状态：`];
-        for (const [key, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"]]) {
-          const status = result[key];
-          if (!status || !status.configured) { lines.push(`${title}：未配置`); continue; }
-          if (status.reachable === false) { lines.push(`${title}：连接失败，请检查地址、网络和认证。`); continue; }
-          if (key === "streamlog") { lines.push(`${title}：已配置；请用已知 client 和 token 验证查询权限。`); continue; }
-          if (key === "opensearch" && status.http_status === 403) { lines.push(`${title}：地址可达，根路径被拒绝（403）；具体索引权限可能不同。`); continue; }
-          if (key === "opensearch" && status.root_accessible) { lines.push(`${title}：地址可达；具体索引权限仍需查询验证。`); continue; }
-          if (key === "loki" && status.labels_accessible) { lines.push(`${title}：标签接口可读；应用日志仍需查询验证。`); continue; }
-          if (status.http_status) { lines.push(`${title}：地址可达（HTTP ${status.http_status}），请检查认证或权限。`); continue; }
-          lines.push(`${title}：已配置，尚未验证查询。`);
-        }
-        return lines.join("\n");
-      }
       return "操作已完成。";
+    }
+    function openConnectionDialog(result) {
+      connectionEnvironment.textContent = result.environment;
+      connectionResults.replaceChildren();
+      const indexMessages = {
+        ok:"默认索引查询通过", missing_default_index:"未配置默认索引", index_not_found:"默认索引不存在",
+        unauthorized:"认证失败，请检查凭证", forbidden:"没有默认索引的查询权限", partial:"查询不完整，部分分片失败",
+        timeout:"查询超时", invalid_response:"响应无效，无法确认权限", query_failed:"查询失败", invalid_index:"默认索引无效",
+        no_shards:"未命中分片，无法确认索引权限", not_checked:"尚未测试索引查询", not_configured:"未配置"
+      };
+      for (const [key, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"]]) {
+        const status = result[key] && typeof result[key] === "object" ? result[key] : {};
+        let message;
+        if (key === "opensearch") message = indexMessages[status.index_query_status] || (status.configured ? "索引查询状态未知" : "未配置");
+        else if (!status.configured) message = "未配置";
+        else if (key === "streamlog") message = "已配置；查询权限尚未验证";
+        else if (status.reachable === false) message = "连接失败，请检查网络和凭证";
+        else if (status.labels_accessible) message = "标签接口可访问";
+        else if (status.http_status) message = `接口返回 HTTP ${status.http_status}`;
+        else message = "已配置；尚未验证";
+        const card = document.createElement("section"); card.className = "service-result";
+        const heading = document.createElement("h3"); heading.textContent = title;
+        const description = document.createElement("p"); description.textContent = message;
+        if (["unauthorized", "forbidden", "timeout", "invalid_response", "query_failed", "invalid_index"].includes(status.index_query_status) || status.reachable === false) description.className = "problem";
+        card.append(heading, description);
+        if (key === "opensearch" && typeof status.index === "string" && status.index) {
+          const index = document.createElement("p"); index.textContent = status.index; card.appendChild(index);
+        }
+        connectionResults.appendChild(card);
+      }
+      connectionDialog.showModal(); connectionClose.focus();
     }
     function render() {
       groupsNode.replaceChildren(); groupsNode.className = "";
@@ -317,6 +398,7 @@
       function appendAction(container, item) {
         const button = document.createElement("button"); button.type = "button"; button.textContent = labelForAction(item);
         if (item.tool.startsWith("request_delete__")) button.className = "danger-link";
+        if (item.tool.startsWith("test_connection__")) button.dataset.testEnvironment = item.tool.slice("test_connection__".length);
         button.addEventListener("click", () => runAction(item.tool)); container.appendChild(button);
       }
       const nav = section("");
@@ -342,7 +424,7 @@
       if (selectedEnvironment && !addingEnvironment) {
         const group = environmentGroups.find(item => item.id === selectedEnvironment).group;
         const actionRow = document.createElement("div"); actionRow.className = "env-actions";
-        for (const item of group.items) if (item.kind === "tool" && typeof item.tool === "string") appendAction(actionRow, item);
+        for (const item of group.items) if (item.kind === "tool" && typeof item.tool === "string" && !item.tool.startsWith("configure_credentials__")) appendAction(actionRow, item);
         nav.appendChild(actionRow);
       }
       if (addingEnvironment && newGroup) {
@@ -366,7 +448,14 @@
           const details = document.createElement("details"); details.className = "service"; details.open = expandedServices.has(kind);
           const summary = document.createElement("summary"); summary.textContent = title; details.appendChild(summary);
           const fields = document.createElement("div"); fields.className = "fields";
-          for (const key of keys) fields.appendChild(field(key, definitions[key]));
+          let secretAdded = false;
+          for (const key of keys) {
+            fields.appendChild(field(key, definitions[key]));
+            if ((kind === "streamlog" && key.endsWith("__url")) || (kind !== "streamlog" && key.endsWith("__username"))) {
+              fields.appendChild(secretField(selectedEnvironment, kind)); secretAdded = true;
+            }
+          }
+          if (!secretAdded) fields.appendChild(secretField(selectedEnvironment, kind));
           details.appendChild(fields);
           details.addEventListener("toggle", () => { if (details.open) expandedServices.add(kind); else expandedServices.delete(kind); });
           serviceCard.appendChild(details);
@@ -376,37 +465,159 @@
       showState();
     }
     function validateState(data) {
-      if (!data || !data.schema || typeof data.schema !== "object" || !data.schema.properties || typeof data.values !== "object" || Array.isArray(data.values)) throw new Error("配置服务返回的设置结构无效。");
+      if (!data || !data.schema || typeof data.schema !== "object" || !data.schema.properties || typeof data.values !== "object" || Array.isArray(data.values) ||
+          !data.metadata || typeof data.metadata.settings_revision !== "string" || !data.metadata.environments || typeof data.metadata.environments !== "object") throw new Error("配置服务返回的设置结构或版本无效，请更新插件。");
       for (const key of Object.keys(data.schema.properties)) if (!(key in data.values)) throw new Error("配置服务缺少设置值：" + key);
       return data;
     }
-    async function readSettings(preserveDraft = false) {
+    function environmentIds(data = state) {
+      return (data?.layout || []).flatMap(group => (group.items || []).filter(item => item.kind === "tool" && typeof item.tool === "string" && item.tool.startsWith("configure_credentials__")).map(item => item.tool.slice("configure_credentials__".length)));
+    }
+    function environmentForField(key, ids = environmentIds()) {
+      return [...ids].sort((a, b) => b.length - a.length).find(id => key.startsWith(`env__${id}__`));
+    }
+    async function readSettings(preserveDraft = false, knownSettingsMutation = false, resolveConflicts = false) {
       const previous = preserveDraft ? diff() : {};
+      const previousRevisions = revisionSnapshot;
+      const previousIds = environmentIds();
+      const dirtyEnvironmentIds = new Set(Object.keys(secretDraft));
+      for (const key of Object.keys(previous)) { const id = environmentForField(key); if (id) dirtyEnvironmentIds.add(id); }
+      const hadPending = Object.keys(previous).length > 0 || secretCount() > 0;
       const data = validateState(await callTool("settings_read"));
+      const conflicts = [];
+      if (resolveConflicts && previousRevisions) {
+        for (const id of dirtyEnvironmentIds) {
+          if (previousRevisions.environments[id] !== data.metadata.environments[id]?.revision) {
+            for (const key of Object.keys(previous)) if (environmentForField(key, previousIds) === id) delete previous[key];
+            delete secretDraft[id]; conflicts.push(id);
+          }
+        }
+        if (Object.hasOwn(previous, "default_environment") && previousRevisions.settings_revision !== data.metadata.settings_revision) {
+          delete previous.default_environment; conflicts.push("默认环境");
+        }
+      }
       state = data; baseline = {...data.values}; draft = {...data.values};
       for (const [key, value] of Object.entries(previous)) {
         const schema = data.schema.properties[key];
         if (schema && (!Array.isArray(schema.enum) || schema.enum.includes(value))) draft[key] = value;
       }
+      const ids = environmentIds(data);
+      for (const id of Object.keys(secretDraft)) if (!ids.includes(id)) delete secretDraft[id];
+      const hasPendingDefault = Object.hasOwn(previous, "default_environment") &&
+        (!Array.isArray(data.schema.properties.default_environment?.enum) || data.schema.properties.default_environment.enum.includes(previous.default_environment));
+      revisionSnapshot = {settings_revision:preserveDraft && !resolveConflicts && hadPending && previousRevisions && (!knownSettingsMutation || hasPendingDefault) ? previousRevisions.settings_revision : data.metadata.settings_revision, environments:Object.create(null)};
+      for (const id of ids) {
+        const current = data.metadata.environments[id]?.revision;
+        const prior = previousRevisions?.environments?.[id];
+        if (typeof current !== "string") throw new Error("环境配置版本无效，请刷新设置。");
+        revisionSnapshot.environments[id] = preserveDraft && !resolveConflicts && dirtyEnvironmentIds.has(id) && typeof prior === "string" ? prior : current;
+      }
       render();
+      return conflicts;
     }
-    async function saveChanges(filter = () => true) {
+    function identityChanged(environment, service, changes) {
+      const fields = service === "loki" ? ["url", "username", "auth_type"] : service === "opensearch" ? ["url", "username"] : ["url"];
+      return fields.some(field => {
+        const key = `env__${environment}__${service}__${field}`;
+        if (!(key in changes)) return false;
+        const oldValue = String(baseline[key] ?? ""), newValue = String(changes[key] ?? "");
+        return field === "url" ? oldValue.replace(/\/+$/, "") !== newValue.replace(/\/+$/, "") : oldValue !== newValue;
+      });
+    }
+    function validateSecrets(changes, secrets, targets) {
+      for (const environment of targets) for (const service of ["opensearch", "streamlog", "loki"]) {
+        const secret = secrets[environment]?.[service] || "";
+        const mode = draft[`env__${environment}__loki__auth_type`] || "basic";
+        if (service === "loki" && mode === "none" && secret) throw new Error(`${environment} 的 Loki 无需认证，请清空凭证后保存。`);
+        const saved = state.metadata.environments[environment]?.[service]?.has_secret;
+        const url = draft[`env__${environment}__${service}__url`] || "";
+        if (saved && url && !(service === "loki" && mode === "none") && identityChanged(environment, service, changes) && !secret) {
+          throw new Error(`${environment} 的 ${service} 连接已更改，请重新输入凭证。`);
+        }
+      }
+    }
+    function bytesFromBase64(value) {
+      const decoded = atob(value); return Uint8Array.from(decoded, character => character.charCodeAt(0));
+    }
+    function base64FromBytes(value) {
+      const bytes = new Uint8Array(value); let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary);
+    }
+    async function secureSave(changes, secrets) {
+      if (!globalThis.isSecureContext || !globalThis.crypto?.subtle) throw new Error("当前配置窗口不支持安全加密，请在支持的 Codex 版本中打开设置。");
+      if (!revisionSnapshot || typeof revisionSnapshot.settings_revision !== "string") throw new Error("缺少配置版本，请刷新后重试。");
+      const ids = environmentIds();
+      const targets = new Set(Object.keys(secrets));
+      for (const key of Object.keys(changes)) { const id = environmentForField(key, ids); if (id) targets.add(id); }
+      if (ids.includes(changes.default_environment)) targets.add(changes.default_environment);
+      validateSecrets(changes, secrets, targets);
+      const expected = Object.create(null);
+      for (const id of targets) {
+        if (typeof revisionSnapshot.environments[id] !== "string") throw new Error(`环境 ${id} 的配置版本不可用，请刷新设置。`);
+        expected[id] = revisionSnapshot.environments[id];
+      }
+      let session;
+      try { session = await callTool("begin_settings_save", {environments:[...targets], expected_revisions:expected, expected_settings_revision:revisionSnapshot.settings_revision}); }
+      catch (error) {
+        if (/已改变|已变化|版本冲突/.test(describeError(error))) syncNeeded = true;
+        throw error;
+      }
+      if (!session || typeof session.session_id !== "string" || typeof session.public_key_spki !== "string") throw new Error("安全配置会话无效，请重试。");
+      let rawKey, plain;
+      try {
+        const subtle = globalThis.crypto.subtle;
+        const key = await subtle.generateKey({name:"AES-GCM", length:256}, true, ["encrypt"]);
+        rawKey = new Uint8Array(await subtle.exportKey("raw", key));
+        const publicKey = await subtle.importKey("spki", bytesFromBase64(session.public_key_spki), {name:"RSA-OAEP", hash:"SHA-256"}, false, ["encrypt"]);
+        const encryptedKey = await subtle.encrypt({name:"RSA-OAEP"}, publicKey, rawKey);
+        const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
+        plain = new TextEncoder().encode(JSON.stringify({set:changes, secrets}));
+        const ciphertext = await subtle.encrypt({name:"AES-GCM", iv, additionalData:new TextEncoder().encode(session.session_id), tagLength:128}, key, plain);
+        try {
+          return await callTool("save_settings_secure", {session_id:session.session_id, encrypted_key:base64FromBytes(encryptedKey), iv:base64FromBytes(iv), ciphertext:base64FromBytes(ciphertext)});
+        } catch (error) {
+          if (error instanceof TransportFailure || /回滚未完成|rollback was incomplete|已改变|已变化|版本冲突/i.test(describeError(error))) {
+            syncNeeded = true;
+            throw new Error(error instanceof TransportFailure ? "保存结果未知，请刷新后检查设置。" : describeError(error));
+          }
+          throw error;
+        }
+      } finally { if (rawKey) rawKey.fill(0); if (plain) plain.fill(0); }
+    }
+    async function saveChanges(filter = () => true, secretFilter = () => true) {
       const allChanges = diff();
       const changes = Object.fromEntries(Object.entries(allChanges).filter(([key]) => filter(key)));
-      if (!Object.keys(changes).length) return;
+      const secrets = Object.create(null);
+      for (const [id, services] of Object.entries(secretDraft)) if (secretFilter(id)) {
+        const submitted = Object.fromEntries(Object.entries(services).filter(([, value]) => Boolean(value)));
+        if (Object.keys(submitted).length) secrets[id] = submitted;
+      }
+      if (!Object.keys(changes).length && !Object.keys(secrets).length) return false;
       for (const key of Object.keys(changes)) {
         const control = document.getElementById("field-" + key);
         if (control && !control.checkValidity()) { control.closest("details")?.setAttribute("open", ""); control.reportValidity(); throw new Error("请检查标记的设置项。"); }
       }
-      const updated = await callTool("settings_update", {set:changes});
-      if (!updated || !updated.values || typeof updated.values !== "object" || Array.isArray(updated.values)) throw new Error("配置服务未确认保存，已保留未保存的修改。");
+      const updated = await secureSave(changes, secrets);
+      if (!updated || updated.saved !== true) throw new Error("配置服务未确认保存，已保留未保存的修改。");
       // The server may normalize a value (for example, strip a trailing slash).
       // It must acknowledge each submitted key; its saved values are authoritative.
-      for (const key of Object.keys(changes)) {
-        if (!(key in updated.values)) throw new Error("配置服务未确认全部修改，已保留本地修改；请重新读取后确认。");
+      for (const [id, services] of Object.entries(secrets)) {
+        for (const service of Object.keys(services)) delete secretDraft[id][service];
+        if (!Object.keys(secretDraft[id]).length) delete secretDraft[id];
+      }
+      // Saved secrets are removed from the DOM even if the subsequent refresh fails.
+      for (const [id, services] of Object.entries(secrets)) for (const service of Object.keys(services)) {
+        const input = document.getElementById(`secret-${id}-${service}`); if (input) input.value = "";
+      }
+      if (!updated.values || typeof updated.values !== "object" || Array.isArray(updated.values) || Object.keys(changes).some(key => !(key in updated.values))) {
+        for (const key of Object.keys(changes)) baseline[key] = draft[key];
+        syncNeeded = true;
+        throw new Error("设置已保存，但需要刷新以确认结果。");
       }
       baseline = {...updated.values}; draft = {...updated.values};
       for (const [key, value] of Object.entries(allChanges)) if (!(key in changes) && key in updated.values) draft[key] = value;
+      return true;
     }
     async function runAction(name) {
       if (busy || !state) return;
@@ -419,14 +630,22 @@
           if (!preview || preview.environment !== target) throw new Error("无法确认要删除的环境，请刷新后重试。");
           openDeleteDialog(preview); return;
         }
-        const boundId = name.startsWith("configure_credentials__") ? name.slice("configure_credentials__".length) :
-          name.startsWith("test_connection__") ? name.slice("test_connection__".length) : null;
-        await saveChanges(key => boundId ? key.startsWith(`env__${boundId}__`) : key.startsWith("new_environment_"));
+        const boundId = name.startsWith("test_connection__") ? name.slice("test_connection__".length) : null;
+        const saved = await saveChanges(key => boundId ? environmentForField(key) === boundId : key.startsWith("new_environment_"), id => id === boundId);
+        if (saved) {
+          syncNeeded = true;
+          try { await readSettings(true, !boundId); syncNeeded = false; }
+          catch (_) { throw new Error("设置已保存，但刷新失败；请刷新后再测试。"); }
+        }
         const result = await callTool(name);
+        if (boundId) {
+          if (result.action !== "connection_result" || result.environment !== boundId) throw new Error("连接测试结果与所选环境不一致。");
+          dispatchUiAction(result); return;
+        }
         if (name === "create_environment" && typeof result.environment === "string") {
           selectedEnvironment = result.environment; addingEnvironment = false;
         }
-        await readSettings(true);
+        await readSettings(true, name === "create_environment");
         // Re-render replaces the previous group node. A shared notice keeps
         // action results visible even when the action changes the schema.
         setNotice(formatResult(result, name));
@@ -435,16 +654,22 @@
     }
     form.addEventListener("submit", async event => {
       event.preventDefault(); if (busy || !state) return; setNotice(""); setBusy(true);
-      try { await saveChanges(); await readSettings(); }
-      catch (error) { setNotice(describeError(error), true); }
+      let saved = false;
+      try { saved = await saveChanges(); if (saved) syncNeeded = true; await readSettings(); syncNeeded = false; }
+      catch (error) { setNotice(saved ? "设置已保存，但刷新失败；请刷新设置。" : describeError(error), true); }
       finally { setBusy(false); }
     });
-    discardButton.addEventListener("click", () => { if (!busy && state) { draft = {...baseline}; render(); setNotice(""); } });
+    discardButton.addEventListener("click", () => { if (!busy && state) { draft = {...baseline}; secretDraft = Object.create(null); render(); setNotice(""); } });
     reloadButton.addEventListener("click", async () => {
       if (busy) return;
-      if (!syncNeeded && Object.keys(diff()).length) { setNotice("请先保存或放弃未保存的修改，再重新读取。", true); return; }
+      if (!syncNeeded && (Object.keys(diff()).length || secretCount())) { setNotice("请先保存或放弃未保存的修改，再重新读取。", true); return; }
       setNotice(""); setBusy(true);
-      try { await readSettings(syncNeeded); syncNeeded = false; flushDeletePreview(); }
+      try {
+        const wasRequired = syncNeeded;
+        const conflicts = await readSettings(wasRequired, false, wasRequired); syncNeeded = false; flushUiAction();
+        if (conflicts.length) setNotice(`配置已变化，${conflicts.join("、")} 的未保存修改及凭证已清除，请检查后重新输入。`, true);
+        else if (wasRequired) setNotice("设置已刷新，请检查后继续。");
+      }
       catch (error) { setNotice(describeError(error), true); }
       finally { setBusy(false); }
     });
@@ -454,7 +679,9 @@
     });
     deleteCancel.addEventListener("click", () => { if (!deleteInFlight) deleteDialog.close(); });
     deleteDialog.addEventListener("cancel", event => { if (deleteInFlight) event.preventDefault(); });
-    deleteDialog.addEventListener("close", () => { deletePreview = null; deleteConfirmation.value = ""; deleteError.textContent = ""; flushDeletePreview(); });
+    deleteDialog.addEventListener("close", () => { deletePreview = null; deleteConfirmation.value = ""; deleteError.textContent = ""; flushUiAction(); });
+    connectionClose.addEventListener("click", () => connectionDialog.close());
+    connectionDialog.addEventListener("close", flushUiAction);
     deleteSubmit.addEventListener("click", async () => {
       if (deleteInFlight || !deletePreview || deleteConfirmation.value !== deletePreview.environment) return;
       const target = deletePreview.environment;
@@ -463,10 +690,11 @@
         const result = await callTool("delete_environment", {environment:target, confirmation:deleteConfirmation.value});
         if (!result || result.deleted !== true || result.environment !== target) throw new Error("删除结果无法确认，请刷新后检查。");
         deleteDialog.close();
+        delete secretDraft[target];
         if (selectedEnvironment === target) selectedEnvironment = null;
         syncNeeded = true;
         try {
-          await readSettings(true); syncNeeded = false;
+          await readSettings(true, result.default_cleared === true); syncNeeded = false;
           setNotice(`已删除环境 ${target}。`);
         } catch (_) {
           setNotice(`环境 ${target} 已删除，但刷新失败；请刷新设置。`, true);
@@ -477,9 +705,9 @@
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.4"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.5.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
-        await readSettings(); flushDeletePreview();
+        await readSettings(); flushUiAction();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }
     }
     if (typeof ResizeObserver !== "undefined") {

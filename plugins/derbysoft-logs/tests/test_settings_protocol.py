@@ -7,7 +7,7 @@ import sys
 import pytest
 from mcp import Client, StdioServerParameters
 
-from derbysoft_logs import config, credential_portal, settings, settings_server
+from derbysoft_logs import config, settings, settings_server
 
 
 @pytest.fixture
@@ -31,8 +31,6 @@ def field(name, *path):
 
 @pytest.mark.asyncio
 async def test_native_settings_creation_save_default_and_index(isolated, monkeypatch):
-    opened = []
-    monkeypatch.setattr(credential_portal, "open_credentials", lambda environment: opened.append(environment) or {"opened": True})
     async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
         assert session.server_capabilities.extensions["openai/settings"] == {
             "readTool": "settings_read", "updateTool": "settings_update"
@@ -41,6 +39,10 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
         assert set(tools["settings_read"].output_schema["required"]) >= {"schema", "values", "layout"}
         assert tools["settings_update"].meta["ui"]["visibility"] == ["app"]
         assert tools["open_log_settings"].meta["ui"]["resourceUri"] == settings_server.URI
+        for name in ("begin_settings_save", "save_settings_secure"):
+            assert tools[name].meta["ui"]["visibility"] == ["app"]
+            assert not tools[name].annotations.idempotent_hint
+        assert set(tools["save_settings_secure"].input_schema["properties"]) == {"session_id", "encrypted_key", "iv", "ciphertext"}
         result = await session.call_tool("settings_read", {})
         assert not result.is_error
         initial = result.structured_content
@@ -56,6 +58,10 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
         assert not created.is_error and created.structured_content["environment"] == "uat"
         changed_tools = {tool.name for tool in (await session.list_tools()).tools}
         assert {"configure_credentials__uat", "test_connection__uat"} <= changed_tools
+        changed_tools = {tool.name: tool for tool in (await session.list_tools()).tools}
+        for name in ("configure_credentials__uat", "test_connection__uat"):
+            assert changed_tools[name].meta["ui"]["resourceUri"] == settings_server.URI
+            assert changed_tools[name].meta["ui"]["visibility"] == ["app"]
         read = (await session.call_tool("settings_read", {})).structured_content
         assert read["schema"]["properties"]["default_environment"]["enum"] == [settings.NO_DEFAULT, "uat"]
         assert any(group["title"] == "uat" for group in read["layout"])
@@ -69,8 +75,8 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
         assert saved.structured_content["values"]["default_environment"] == "uat"
         assert config.resolve_index("uat") == ("derbysoft-exchange-*", "default")
         assert config.resolve_index("uat", "different-*") == ("different-*", "explicit")
-        assert not (await session.call_tool("configure_credentials__uat", {})).is_error
-        assert opened == ["uat"]
+        editor = await session.call_tool("configure_credentials__uat", {})
+        assert not editor.is_error and editor.structured_content == {"action": "edit_environment", "environment": "uat"}
         assert "password" not in json.dumps(read)
 
 
@@ -79,14 +85,12 @@ async def test_env_actions_remain_bound_to_id_not_changing_default(isolated, mon
     config.create_environment("uat", kind="uat")
     config.create_environment("prod", kind="prod")
     config.set_default_environment("uat")
-    invoked = []
-    monkeypatch.setattr(credential_portal, "open_credentials", lambda environment: invoked.append(environment) or {"opened": True})
     async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
         await session.call_tool("settings_read", {})  # refresh buttons after external profile creation
         config.set_default_environment("prod")
         response = await session.call_tool("configure_credentials__uat", {})
         assert not response.is_error
-        assert invoked == ["uat"]
+        assert response.structured_content == {"action": "edit_environment", "environment": "uat"}
         state = (await session.call_tool("settings_read", {})).structured_content
         assert state["values"]["default_environment"] == "prod"
 
