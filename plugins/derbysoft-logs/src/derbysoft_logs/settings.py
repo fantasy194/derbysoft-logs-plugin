@@ -63,7 +63,7 @@ def read() -> dict[str, Any]:
         props: dict[str, Any] = {
             "default_environment": {
                 "type": "string", "title": "默认环境", "enum": [NO_DEFAULT] + names,
-                "description": "未设置时，查询前须选择环境。旧 default 需确认后迁移。",
+                "description": "未设置时，查询前须选择环境。",
             },
             "new_environment_id": {"type": "string", "title": "新环境 ID", "maxLength": 64,
                                    "description": "例如 uat 或 prod；不能使用 default。"},
@@ -81,10 +81,7 @@ def read() -> dict[str, Any]:
             props["default_environment"]["description"] += " 当前环境变量 DERBYSOFT_LOGS_PROFILE 覆盖默认值；移除它后才能在此修改默认。"
         new_items = [{"kind": "property", "property": key} for key in _DRAFT_DEFAULTS]
         new_items.append({"kind": "tool", "tool": "create_environment"})
-        if details.get("legacy_default_available"):
-            new_items.append({"kind": "tool", "tool": "migrate_legacy_environment",
-                              "description": "将旧 default 迁移到上面填写的环境 ID；请先确认它的实际环境。"})
-        layout.append({"kind": "group", "title": "新增或迁移环境", "items": new_items})
+        layout.append({"kind": "group", "title": "新增环境", "items": new_items})
 
         for env in details["environments"]:
             name = env["id"]
@@ -183,13 +180,10 @@ def update(changes: dict[str, Any]) -> dict[str, Any]:
         return {"values": read()["values"]}
 
 
-def create(*, migrate: bool = False) -> dict[str, Any]:
+def create() -> dict[str, Any]:
     with _lock:
         identifier, label, kind = (_draft["new_environment_id"], _draft["new_environment_label"],
                                    _draft["new_environment_kind"])
-        if migrate:
-            result = config.migrate_legacy_environment(identifier, label=label, kind=kind)
-        else:
-            result = config.create_environment(identifier, label=label, kind=kind)
+        result = config.create_environment(identifier, label=label, kind=kind)
         _draft.update(_DRAFT_DEFAULTS)
-        return {"environment": result["id"], "created": True, "migrated": migrate}
+        return {"environment": result["id"], "created": True}

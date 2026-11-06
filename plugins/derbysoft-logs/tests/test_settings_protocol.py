@@ -87,17 +87,21 @@ async def test_env_actions_remain_bound_to_id_not_changing_default(isolated, mon
 
 
 @pytest.mark.asyncio
-async def test_legacy_default_requires_explicit_migration(isolated):
-    (isolated / "default.json").write_text(json.dumps({"opensearch": {"url": "https://legacy.example.test", "username": "reader", "credential_store": True}}), encoding="utf-8")
+async def test_manual_setup_never_copies_unselected_profile(isolated):
+    old = {"opensearch": {"url": "https://old.example.test", "username": "reader", "credential_store": True}}
+    (isolated / "default.json").write_text(json.dumps(old), encoding="utf-8")
     config.keyring.set_password(config._service("default"), "opensearch", "fixture-secret")
     async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
         page = (await session.call_tool("settings_read", {})).structured_content
         assert "default" not in page["schema"]["properties"]["default_environment"]["enum"]
-        assert any(item.get("tool") == "migrate_legacy_environment" for group in page["layout"] for item in group["items"])
+        assert all("migrat" not in tool.name for tool in (await session.list_tools()).tools)
+        assert "迁移" not in json.dumps(page, ensure_ascii=False)
         await session.call_tool("settings_update", {"set": {"new_environment_id": "uat", "new_environment_kind": "uat"}})
-        migrated = await session.call_tool("migrate_legacy_environment", {})
-        assert not migrated.is_error and migrated.structured_content["environment"] == "uat"
-        assert config.load_profile("uat")["opensearch"]["password"] == "fixture-secret"
+        created = await session.call_tool("create_environment", {})
+        assert not created.is_error and created.structured_content == {"environment": "uat", "created": True}
+        assert config.load_profile("uat")["opensearch"] == {}
+        assert config.environment_catalog()["default_environment"] is None
+        assert json.loads((isolated / "default.json").read_text()) == old
         assert "fixture-secret" not in json.dumps((await session.call_tool("settings_read", {})).structured_content)
 
 

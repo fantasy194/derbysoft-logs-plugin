@@ -90,7 +90,7 @@ def test_legacy_default_never_receives_unscoped_overrides(isolated, monkeypatch)
     monkeypatch.setenv("OPENSEARCH_URL", "https://other.example.test")
     monkeypatch.setenv("OPENSEARCH_USERNAME", "wrong-user")
     monkeypatch.setenv("OPENSEARCH_PASSWORD", "wrong-secret")
-    with pytest.raises(config.ConfigurationError, match="legacy"):
+    with pytest.raises(config.ConfigurationError, match="reserved"):
         config.load_profile("default")
     with pytest.raises(config.ConfigurationError):
         config.load_profile()
@@ -104,7 +104,7 @@ def test_legacy_default_and_clear_setting(isolated):
     assert config.environment_catalog()["default_environment"] is None
     with pytest.raises(config.ConfigurationError, match="No default environment"):
         config.resolve_environment()
-    with pytest.raises(config.ConfigurationError, match="legacy"):
+    with pytest.raises(config.ConfigurationError, match="reserved"):
         config.load_profile("default")
 
 
@@ -113,7 +113,7 @@ def test_virtual_environment_requires_explicit_name(isolated, monkeypatch):
     monkeypatch.setenv("OPENSEARCH_USERNAME", "reader")
     monkeypatch.setenv("OPENSEARCH_PASSWORD", "password")
     assert config.environment_catalog() == {"environments": [], "default_environment": None}
-    with pytest.raises(config.ConfigurationError, match="legacy"):
+    with pytest.raises(config.ConfigurationError, match="reserved"):
         config.load_profile("default")
     with pytest.raises(config.ConfigurationError, match="not configured"):
         config.load_profile("prod")

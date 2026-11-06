@@ -8,7 +8,7 @@ DerbySoft 内部日志调查插件：结合业务 PerfLog、StreamLog 请求/响
 
 需要已安装 Codex 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并能访问此私有 Git 仓库及公司日志服务。`uv` 使用锁文件安装依赖，并管理兼容的 Python 运行时；首次安装依赖可能需要访问包仓库。
 
-推荐在 Codex 桌面应用中安装：打开 **Plugins → Add → Add a marketplace**，填写本仓库的 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；然后在 marketplace 中选择 **DerbySoft Logs 0.4.1** 安装。访问私有 Git 仓库前，需要配置有权读取该仓库的 Git 认证。
+推荐在 Codex 桌面应用中安装：打开 **Plugins → Add → Add a marketplace**，填写本仓库的 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；然后在 marketplace 中选择 **DerbySoft Logs 0.4.2** 安装。访问私有 Git 仓库前，需要配置有权读取该仓库的 Git 认证。
 
 安装后在插件详情页打开 **DerbySoft Logs** 设置；新版本安装或刷新后如工具未出现，重新打开插件或启动新会话。曾安装旧版 `derbysoft-logs-local` 的用户可以在插件目录停用旧副本，避免工具重复。
 

@@ -150,7 +150,6 @@
     function labelForAction(item) {
       if (typeof item.title === "string" && item.title.trim()) return item.title;
       if (item.tool === "create_environment") return "新增环境";
-      if (item.tool === "migrate_legacy_environment") return "迁移旧环境";
       if (item.tool.startsWith("configure_credentials__")) return "配置凭证";
       if (item.tool.startsWith("test_connection__")) return "测试连接";
       return item.tool;
@@ -214,7 +213,6 @@
         return result.opened ? `已为 ${environment} 打开凭证配置页面。请在该页面完成输入。` : "未能打开凭证配置页面，请重试。";
       }
       if (action === "create_environment") return `已创建环境 ${environment}。`;
-      if (action === "migrate_legacy_environment") return `已将旧环境迁移为 ${environment}，请检查其连接和默认索引。`;
       if (action.startsWith("test_connection__")) {
         const lines = [`${environment} 连接状态：`];
         for (const [key, title] of [["opensearch", "OpenSearch"], ["streamlog", "StreamLog"], ["loki", "Loki"]]) {
@@ -349,7 +347,7 @@
           name.startsWith("test_connection__") ? name.slice("test_connection__".length) : null;
         await saveChanges(key => boundId ? key.startsWith(`env__${boundId}__`) : key.startsWith("new_environment_"));
         const result = await callTool(name);
-        if ((name === "create_environment" || name === "migrate_legacy_environment") && typeof result.environment === "string") {
+        if (name === "create_environment" && typeof result.environment === "string") {
           selectedEnvironment = result.environment; addingEnvironment = false;
         }
         await readSettings(true);
@@ -377,7 +375,7 @@
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.1"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.4.2"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
         await readSettings();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }

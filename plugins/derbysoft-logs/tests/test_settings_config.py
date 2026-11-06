@@ -1,4 +1,4 @@
-"""Environment identity, safe migration, and server-resolved index behavior."""
+"""Environment identity, manual setup, and server-resolved index behavior."""
 from concurrent.futures import ThreadPoolExecutor
 import json
 
@@ -115,57 +115,6 @@ def test_virtual_environment_is_visible_but_cannot_be_edited_or_promoted(isolate
     with pytest.raises(config.ConfigurationError, match="virtual environment"):
         config.update_environment("uat", {"opensearch": {"default_index": "uat-*"}})
     assert not (isolated[0] / "uat.json").exists()
-
-
-def legacy_fixture(home, secrets):
-    old = {"opensearch": {"url": "https://old.example.test", "username": "reader",
-                          "default_index": "old-*", "credential_store": True, "secret_id": "opensearch/old"},
-           "streamlog": {"url": "https://old-stream.example.test", "credential_store": True,
-                         "secret_id": "streamlog/old"}}
-    (home / "default.json").write_text(json.dumps(old), encoding="utf-8")
-    (home / "settings.json").write_text('{"default_environment":"default"}', encoding="utf-8")
-    secrets[(config._service("default"), "opensearch/old")] = "old-secret"
-    secrets[(config._service("default"), "streamlog/old")] = "old-authorization"
-    return old
-
-
-def test_legacy_default_requires_explicit_migration_and_copies_securely(isolated):
-    home, secrets = isolated
-    old = legacy_fixture(home, secrets)
-    assert config.public_environment_details()["legacy_default_available"]
-    assert config.environment_catalog()["environments"] == []
-    with pytest.raises(config.ConfigurationError, match="legacy"):
-        config.resolve_environment()
-    view = config.migrate_legacy_environment("uat", "测试环境", "uat")
-    assert view["id"] == "uat"
-    assert config.resolve_environment() == "uat"
-    assert config.resolve_index("uat") == ("old-*", "default")
-    assert config.load_profile("uat")["opensearch"]["password"] == "old-secret"
-    assert json.loads((home / "default.json").read_text(encoding="utf-8")) == old
-    assert "old-secret" not in (home / "uat.json").read_text(encoding="utf-8")
-    with pytest.raises(config.ConfigurationError, match="already exists"):
-        config.migrate_legacy_environment("uat")
-
-
-def test_failed_legacy_migration_keeps_source_and_existing_default(isolated):
-    home, secrets = isolated
-    legacy_fixture(home, secrets)
-    del secrets[(config._service("default"), "streamlog/old")]
-    with pytest.raises(config.ConfigurationError, match="credential is unavailable"):
-        config.migrate_legacy_environment("uat")
-    assert not (home / "uat.json").exists()
-    assert json.loads((home / "settings.json").read_text()) == {"default_environment": "default"}
-    assert (home / "default.json").exists()
-    assert not any(service == config._service("uat") for service, _ in secrets)
-
-
-def test_migration_keeps_a_different_existing_default(isolated):
-    home, secrets = isolated
-    config.create_environment("prod")
-    legacy_fixture(home, secrets)
-    config.set_default_environment("prod")
-    config.migrate_legacy_environment("uat")
-    assert config.resolve_environment() == "prod"
 
 
 def test_parallel_partial_updates_do_not_erase_each_other(isolated):

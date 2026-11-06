@@ -25,7 +25,7 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
   };
   const layout = [
     {kind:'group',title:'环境选择',items:[{kind:'property',property:'default_environment'},{kind:'tool',tool:'open_log_settings'}]},
-    {kind:'group',title:'新增或迁移环境',items:[{kind:'property',property:'new_environment_id'},{kind:'property',property:'new_environment_label'},{kind:'property',property:'new_environment_kind'},{kind:'tool',tool:'create_environment'}]}
+    {kind:'group',title:'新增环境',items:[{kind:'property',property:'new_environment_id'},{kind:'property',property:'new_environment_label'},{kind:'property',property:'new_environment_kind'},{kind:'tool',tool:'create_environment'}]}
   ];
   function addEnvironment(id,label) {
     const prefix='env__'+id+'__', items=[];
@@ -64,7 +64,7 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
     } else if(name==='create_environment'){
       const id=values.new_environment_id;if(!id){reply(event,msg.id,{isError:true,content:[{type:'text',text:'请输入环境 ID'}]});return;}
       addEnvironment(id,values.new_environment_label||id);props.default_environment.enum.push(id);
-      values.new_environment_id='';values.new_environment_label='';values.new_environment_kind='custom';out={environment:id,created:true,migrated:false};
+      values.new_environment_id='';values.new_environment_label='';values.new_environment_kind='custom';out={environment:id,created:true};
     } else if(name.startsWith('configure_credentials__'))out={opened:true,environment:name.slice('configure_credentials__'.length)};
     else if(name.startsWith('test_connection__'))out={environment:name.slice('test_connection__'.length),opensearch:{configured:true}};
     else {reply(event,msg.id,{isError:true,content:[{type:'text',text:'unknown action'}]});return;}

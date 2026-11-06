@@ -90,7 +90,7 @@ def configuration_lock():
 def _canonical_name(name: str) -> str:
     name = profile_name(name)
     if name.lower() == "default":
-        raise ConfigurationError("'default' is a legacy profile, not an environment. Migrate it to an explicit name such as uat or prod.")
+        raise ConfigurationError("'default' is reserved. Create a named environment such as uat or prod and configure its connections.")
     return name
 
 
@@ -171,7 +171,7 @@ def environment_catalog() -> dict:
             if settings is not None:
                 selected = settings["default_environment"]
         if selected is not None and selected.lower() == "default":
-            raise ConfigurationError("The legacy 'default' profile must be migrated to a named environment before querying.")
+            raise ConfigurationError("Select a configured named environment before querying; 'default' is not an environment name.")
     except ConfigurationError as exc:
         return {"environments": names, "default_environment": None, "default_error": str(exc)}
     if selected is not None and selected not in names:
@@ -452,11 +452,8 @@ def public_environment_details() -> dict:
         persisted_default = None
     default_source = ("process" if "DERBYSOFT_LOGS_PROFILE" in os.environ else
                       "persistent" if persisted_default is not None else "none")
-    migrated_to = saved_settings.get("legacy_default_migrated_to") if saved_settings else None
     result = {"environments": [], "default_environment": catalog["default_environment"],
-              "persisted_default_environment": persisted_default, "default_source": default_source,
-              "legacy_default_available": (config_home() / "default.json").is_file() and not migrated_to,
-              "legacy_default_migrated_to": migrated_to}
+              "persisted_default_environment": persisted_default, "default_source": default_source}
     if "default_error" in catalog:
         result["default_error"] = catalog["default_error"]
     for name in catalog["environments"]:
@@ -570,60 +567,6 @@ def update_environment(name: str, patch: dict) -> dict:
         data = _build_environment_patch(name, patch)
         _atomic_json(config_home() / f"{name}.json", data)
         return _environment_view(name, data)
-
-
-def migrate_legacy_environment(target: str, label: str = "", kind: str = "custom") -> dict:
-    """Move the legacy identity to an explicit new name without deleting its source."""
-    target = _canonical_name(target)
-    label, kind = _identity(label, kind)
-    with _storage_lock():
-        legacy_path = config_home() / "default.json"
-        if not legacy_path.is_file():
-            raise ConfigurationError("There is no legacy 'default' profile to migrate.")
-        target_path = config_home() / f"{target}.json"
-        if target_path.exists() or target in _available_environments():
-            raise ConfigurationError(f"Environment '{target}' already exists.")
-        old = _read_stored("default")
-        existing_settings = _settings()
-        if existing_settings and existing_settings.get("legacy_default_migrated_to"):
-            raise ConfigurationError("The legacy environment has already been migrated.")
-        data = {"environment": {"label": label or target, "kind": kind}}
-        generation = uuid.uuid4().hex
-        created = []
-        try:
-            for section in ENV_KEYS:
-                saved = old.get(section)
-                if saved is None:
-                    continue
-                values = {key: _validate_public_field(section, key, value) for key, value in saved.items()
-                          if key in PUBLIC_FIELDS[section]}
-                if saved.get("credential_store"):
-                    secret = keyring.get_password(_service("default"), saved.get("secret_id", section))
-                    if not isinstance(secret, str) or not secret:
-                        raise ConfigurationError(f"Legacy {section} credential is unavailable; unlock the credential store before migration.")
-                    account = f"{section}/{generation}"
-                    keyring.set_password(_service(target), account, secret)
-                    created.append(account)
-                    values.update(credential_store=True, secret_id=account)
-                data[section] = values
-            _atomic_json(target_path, data)
-            next_settings = dict(existing_settings or {})
-            if next_settings.get("default_environment") in {None, "default"}:
-                next_settings["default_environment"] = target
-            next_settings["legacy_default_migrated_to"] = target
-            _atomic_json(config_home() / "settings.json", next_settings, ".settings-")
-        except Exception as exc:
-            if target_path.exists():
-                target_path.unlink()
-            for account in created:
-                try:
-                    keyring.delete_password(_service(target), account)
-                except Exception:
-                    pass
-            if isinstance(exc, ConfigurationError):
-                raise
-            raise ConfigurationError("Cannot migrate the legacy environment; source and prior default remain unchanged.") from None
-        return _environment_view(target, data)
 
 
 def get_default_index(environment: str) -> str | None:

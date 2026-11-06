@@ -19,7 +19,7 @@ URI = "ui://derbysoft-logs/settings.html"
 HIDDEN = {"ui": {"visibility": ["app"]}}
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
-mcp = MCPServer("DerbySoft Logs Settings", version="0.4.1")
+mcp = MCPServer("DerbySoft Logs Settings", version="0.4.2")
 
 # MCP SDK 2.3 validates SEP-2133 reverse-DNS identifiers in its Extension
 # helper; OpenAI's existing extension ID is `openai/settings`. Populate the
@@ -100,14 +100,6 @@ async def _notify_tool_change(ctx: Context) -> None:
 @mcp.tool(name="create_environment", title="创建环境", annotations=WRITE, meta=HIDDEN)
 async def create_environment(ctx: Context) -> dict[str, Any]:
     result = _translate(settings.create)
-    _register_environment_actions()
-    await _notify_tool_change(ctx)
-    return result
-
-
-@mcp.tool(name="migrate_legacy_environment", title="迁移旧 default 环境", annotations=WRITE, meta=HIDDEN)
-async def migrate_legacy_environment(ctx: Context) -> dict[str, Any]:
-    result = _translate(settings.create, migrate=True)
     _register_environment_actions()
     await _notify_tool_change(ctx)
     return result
