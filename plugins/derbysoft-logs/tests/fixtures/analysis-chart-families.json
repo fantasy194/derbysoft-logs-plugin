@@ -1,0 +1,31 @@
+{
+  "reports": [
+    {
+      "title": "趋势与占比示例",
+      "summary": "合成数据，用于验证图表与明细一致。",
+      "sources": [{"id": "perf", "tool": "SearchIndexTool", "environment": "test", "scope": "sample-index", "start": "2026-11-10T00:00:00Z", "end": "2026-11-10T01:00:00Z", "coverage": "complete", "note": "Synthetic fixture."}],
+      "metrics": [], "events": [], "notes": [],
+      "charts": [
+        {"id": "area", "title": "趋势面积", "kind": "area", "unit": "次", "x_label": "时间", "source_ids": ["perf"], "series": [{"name": "请求", "points": [{"x": "2026-11-10T00:00:00Z", "y": 4}, {"x": "2026-11-10T00:10:00Z", "y": null}, {"x": "2026-11-10T00:20:00Z", "y": 12}, {"x": "2026-11-10T00:30:00Z", "y": 16}]}]},
+        {"id": "stack", "title": "数量堆叠", "kind": "stacked_bar", "unit": "次", "x_label": "渠道", "mode": "absolute", "source_ids": ["perf"], "series": [{"name": "成功", "points": [{"x": "渠道 A", "y": 20}, {"x": "渠道 B", "y": 10}]}, {"name": "失败", "points": [{"x": "渠道 A", "y": 80}, {"x": "渠道 B", "y": 30}]}]},
+        {"id": "share", "title": "比例堆叠", "kind": "stacked_bar", "unit": "次", "x_label": "渠道", "mode": "percent", "source_ids": ["perf"], "series": [{"name": "成功", "points": [{"x": "渠道 A", "y": 20}, {"x": "渠道 B", "y": 10}]}, {"name": "失败", "points": [{"x": "渠道 A", "y": 80}, {"x": "渠道 B", "y": 30}]}]},
+        {"id": "pie", "title": "结果饼图", "kind": "pie", "unit": "次", "source_ids": ["perf"], "slices": [{"label": "成功", "value": 15}, {"label": "失败", "value": 5}, {"label": "取消", "value": 0}]},
+        {"id": "donut", "title": "结果环图", "kind": "donut", "unit": "次", "source_ids": ["perf"], "slices": [{"label": "成功", "value": 15}, {"label": "失败", "value": 5}]},
+        {"id": "histogram", "title": "耗时区间", "kind": "histogram", "unit": "次", "x_label": "耗时毫秒", "source_ids": ["perf"], "bins": [{"lower": 0, "upper": 10, "count": 10}, {"lower": 10, "upper": 30, "count": 10}, {"lower": 40, "upper": 50, "count": 2}]}
+      ]
+    },
+    {
+      "title": "分布与流程示例",
+      "summary": "合成数据，用于验证图表与明细一致。",
+      "sources": [{"id": "perf", "tool": "SearchIndexTool", "environment": "test", "scope": "sample-index", "start": "2026-11-10T00:00:00Z", "end": "2026-11-10T01:00:00Z", "coverage": "partial", "note": "Synthetic bounded sample."}],
+      "metrics": [], "events": [], "notes": [],
+      "charts": [
+        {"id": "heat", "title": "渠道热力", "kind": "heatmap", "unit": "次", "x_label": "渠道", "y_label": "供应商", "source_ids": ["perf"], "cells": [{"x": "A", "y": "S1", "value": 0}, {"x": "B", "y": "S1", "value": null}, {"x": "A", "y": "S2", "value": 8}, {"x": "B", "y": "S2", "value": 12}]},
+        {"id": "scatter", "title": "请求散点", "kind": "scatter", "unit": "毫秒", "x_label": "请求量", "y_label": "耗时", "source_ids": ["perf"], "points": [{"x": 1, "y": 4.5, "label": "一"}, {"x": 7, "y": 10, "label": "二"}, {"x": 9, "y": 3, "label": "三"}, {"x": 9, "y": 3, "label": "重合"}]},
+        {"id": "funnel", "title": "事件漏斗", "kind": "funnel", "unit": "次", "source_ids": ["perf"], "stages": [{"label": "提交", "value": 100}, {"label": "处理", "value": 60}, {"label": "完成", "value": 30}]},
+        {"id": "box", "title": "耗时箱线", "kind": "boxplot", "unit": "毫秒", "source_ids": ["perf"], "boxes": [{"label": "服务 A", "min": 1, "q1": 3, "median": 5, "q3": 8, "max": 13}, {"label": "服务 B", "min": 2, "q1": 4, "median": 6, "q3": 7, "max": 10}]},
+        {"id": "sankey", "title": "业务流向", "kind": "sankey", "unit": "次", "source_ids": ["perf"], "nodes": [{"id": "request", "label": "请求"}, {"id": "book", "label": "预订"}, {"id": "fail", "label": "失败"}, {"id": "done", "label": "完成"}], "links": [{"source": "request", "target": "book", "value": 12}, {"source": "book", "target": "fail", "value": 5}, {"source": "book", "target": "done", "value": 6}]}
+      ]
+    }
+  ]
+}

@@ -6,6 +6,7 @@ does not establish that any caller-provided statement or source is true.
 from __future__ import annotations
 
 from datetime import datetime
+import math
 import re
 from typing import Annotated, Literal
 
@@ -35,6 +36,8 @@ Identifier = Annotated[StrictStr, Field(pattern=_SOURCE_ID)]
 # Preserve ordinary integer counts instead of coercing every value to float;
 # JSON/JavaScript cannot represent integers outside this range exactly.
 Number = Annotated[StrictInt | StrictFloat, Field(ge=-(2**53 - 1), le=2**53 - 1, allow_inf_nan=False)]
+NonNegativeNumber = Annotated[Number, Field(ge=0)]
+PositiveNumber = Annotated[Number, Field(gt=0)]
 SourceIds = Annotated[list[Identifier], Field(min_length=1, max_length=16)]
 
 
@@ -108,27 +111,242 @@ class AnalysisSeries(AnalysisModel):
     points: Annotated[list[AnalysisPoint], Field(max_length=400)]
 
 
-class AnalysisChart(AnalysisModel):
+class ChartBase(AnalysisModel):
     id: Identifier
     title: ShortText
-    kind: Literal["line", "bar"]
     unit: Annotated[StrictStr, Field(max_length=40)]
+    source_ids: SourceIds
+
+    def data_size(self) -> int:
+        """Number of supplied observations; used to bound the complete report."""
+        raise NotImplementedError
+
+
+class AnalysisChart(ChartBase):
+    """Existing line/bar contract, also used for area and stacked bars."""
+
+    kind: Literal["line", "bar", "area", "stacked_bar"]
     x_label: ShortText
     series: Annotated[list[AnalysisSeries], Field(min_length=1, max_length=8)]
-    source_ids: SourceIds
+    mode: Literal["absolute", "percent"] | None = None
 
     @model_validator(mode="after")
     def valid_axis(self) -> "AnalysisChart":
         if len({s.name for s in self.series}) != len(self.series):
             raise ValueError("Series names must be unique within a chart.")
         for series in self.series:
-            if self.kind == "line":
+            if self.kind in {"line", "area"}:
                 keys = [timestamp_ns(timestamp(point.x)) for point in series.points]
             else:
                 keys = [point.x for point in series.points]
             if len(set(keys)) != len(keys):
                 raise ValueError("Each time or category must appear at most once per series.")
+        if self.kind != "stacked_bar" and self.mode is not None:
+            raise ValueError("Stack mode applies only to stacked bars.")
+        if self.kind == "stacked_bar":
+            categories = [point.x for point in self.series[0].points]
+            if not categories:
+                raise ValueError("A stacked bar needs at least one category.")
+            for series in self.series:
+                if [point.x for point in series.points] != categories:
+                    raise ValueError("All stacks must provide the same categories in the same order.")
+                if any(point.y is None or point.y < 0 for point in series.points):
+                    raise ValueError("Stacks require complete, nonnegative additive values.")
+            for index in range(len(categories)):
+                total = sum(series.points[index].y for series in self.series)
+                if total > 2**53 - 1 or self.mode == "percent" and total <= 0:
+                    raise ValueError("Stack totals must be representable; percent totals must be positive.")
         return self
+
+    def data_size(self) -> int:
+        return sum(len(series.points) for series in self.series)
+
+
+class NamedValue(AnalysisModel):
+    label: ShortText
+    value: NonNegativeNumber
+
+
+class PieChart(ChartBase):
+    kind: Literal["pie", "donut"]
+    slices: Annotated[list[NamedValue], Field(min_length=1, max_length=40)]
+
+    @model_validator(mode="after")
+    def valid_slices(self) -> "PieChart":
+        values = [part.value for part in self.slices]
+        if len({part.label for part in self.slices}) != len(self.slices):
+            raise ValueError("Slice labels must be unique.")
+        if not 0 < sum(values) <= 2**53 - 1:
+            raise ValueError("Slice total must be positive and representable.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.slices)
+
+
+class HistogramBin(AnalysisModel):
+    lower: Number = Field(description="Inclusive lower boundary of this already-computed bin.")
+    upper: Number = Field(description="Exclusive upper boundary of this already-computed bin.")
+    count: Annotated[StrictInt, Field(ge=0, le=2**53 - 1)] = Field(description="Observed count in [lower, upper); gaps are not zero-count bins.")
+
+
+class HistogramChart(ChartBase):
+    kind: Literal["histogram"]
+    x_label: ShortText
+    bins: Annotated[list[HistogramBin], Field(min_length=1, max_length=120)]
+
+    @model_validator(mode="after")
+    def valid_bins(self) -> "HistogramChart":
+        for index, item in enumerate(self.bins):
+            if item.lower >= item.upper or index and self.bins[index - 1].upper > item.lower:
+                raise ValueError("Histogram bins must be ordered, non-overlapping intervals with positive width.")
+            if not math.isfinite(item.count / (item.upper - item.lower)):
+                raise ValueError("Histogram density must be finite for every bin.")
+        if sum(item.count for item in self.bins) > 2**53 - 1:
+            raise ValueError("Histogram count total must be representable.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.bins)
+
+
+class HeatCell(AnalysisModel):
+    x: ShortText
+    y: ShortText
+    value: Number | None
+
+
+class HeatmapChart(ChartBase):
+    kind: Literal["heatmap"]
+    x_label: ShortText
+    y_label: ShortText
+    cells: Annotated[list[HeatCell], Field(min_length=1, max_length=400)]
+
+    @model_validator(mode="after")
+    def unique_cells(self) -> "HeatmapChart":
+        if len({(cell.x, cell.y) for cell in self.cells}) != len(self.cells):
+            raise ValueError("Each heatmap coordinate must be unique.")
+        if len({cell.x for cell in self.cells}) > 40 or len({cell.y for cell in self.cells}) > 40:
+            raise ValueError("Heatmaps may have at most 40 distinct categories on each axis.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.cells)
+
+
+class ScatterPoint(AnalysisModel):
+    x: Number
+    y: Number
+    label: Annotated[StrictStr, Field(max_length=200)] = ""
+
+
+class ScatterChart(ChartBase):
+    kind: Literal["scatter"]
+    x_label: ShortText
+    y_label: ShortText
+    points: Annotated[list[ScatterPoint], Field(min_length=1, max_length=400)]
+
+    def data_size(self) -> int:
+        return len(self.points)
+
+
+class FunnelChart(ChartBase):
+    kind: Literal["funnel"]
+    stages: Annotated[list[NamedValue], Field(min_length=1, max_length=40)]
+
+    @model_validator(mode="after")
+    def unique_stages(self) -> "FunnelChart":
+        if len({stage.label for stage in self.stages}) != len(self.stages):
+            raise ValueError("Funnel stage labels must be unique.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.stages)
+
+
+class BoxSummary(AnalysisModel):
+    label: ShortText
+    min: Number
+    q1: Number
+    median: Number
+    q3: Number
+    max: Number
+
+    @model_validator(mode="after")
+    def ordered(self) -> "BoxSummary":
+        if not self.min <= self.q1 <= self.median <= self.q3 <= self.max:
+            raise ValueError("Box five-number summaries must be ordered.")
+        return self
+
+
+class BoxplotChart(ChartBase):
+    kind: Literal["boxplot"]
+    boxes: Annotated[list[BoxSummary], Field(min_length=1, max_length=40)]
+
+    @model_validator(mode="after")
+    def unique_boxes(self) -> "BoxplotChart":
+        if len({box.label for box in self.boxes}) != len(self.boxes):
+            raise ValueError("Box labels must be unique.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.boxes)
+
+
+class SankeyNode(AnalysisModel):
+    id: Identifier
+    label: ShortText
+
+
+class SankeyLink(AnalysisModel):
+    source: Identifier
+    target: Identifier
+    value: PositiveNumber
+
+
+class SankeyChart(ChartBase):
+    kind: Literal["sankey"]
+    nodes: Annotated[list[SankeyNode], Field(min_length=2, max_length=40)]
+    links: Annotated[list[SankeyLink], Field(min_length=1, max_length=120)]
+
+    @model_validator(mode="after")
+    def valid_graph(self) -> "SankeyChart":
+        ids = {node.id for node in self.nodes}
+        if len(ids) != len(self.nodes) or len({(link.source, link.target) for link in self.links}) != len(self.links):
+            raise ValueError("Sankey node IDs and directed edges must be unique.")
+        adjacency: dict[str, list[str]] = {node: [] for node in ids}
+        for link in self.links:
+            if link.source not in ids or link.target not in ids:
+                raise ValueError("Every Sankey edge must refer to supplied nodes.")
+            adjacency[link.source].append(link.target)
+        visited: set[str] = set()
+        active: set[str] = set()
+
+        def visit(node: str) -> None:
+            if node in active:
+                raise ValueError("Sankey edges must not contain cycles.")
+            if node in visited:
+                return
+            active.add(node)
+            for target in adjacency[node]:
+                visit(target)
+            active.remove(node)
+            visited.add(node)
+
+        for node in ids:
+            visit(node)
+        if sum(link.value for link in self.links) > 2**53 - 1:
+            raise ValueError("Sankey edge totals must be representable.")
+        return self
+
+    def data_size(self) -> int:
+        return len(self.nodes) + len(self.links)
+
+
+Chart = Annotated[
+    AnalysisChart | PieChart | HistogramChart | HeatmapChart | ScatterChart | FunnelChart | BoxplotChart | SankeyChart,
+    Field(discriminator="kind"),
+]
 
 
 class AnalysisEvent(AnalysisModel):
@@ -151,7 +369,7 @@ class AnalysisReport(AnalysisModel):
     summary: LongText = ""
     sources: Annotated[list[AnalysisSource], Field(min_length=1, max_length=16)]
     metrics: Annotated[list[AnalysisMetric], Field(max_length=12)] = Field(default_factory=list)
-    charts: Annotated[list[AnalysisChart], Field(max_length=6)] = Field(default_factory=list)
+    charts: Annotated[list[Chart], Field(max_length=6)] = Field(default_factory=list)
     events: Annotated[list[AnalysisEvent], Field(max_length=150)] = Field(default_factory=list)
     notes: Annotated[list[LongText], Field(max_length=8)] = Field(default_factory=list)
 
@@ -164,7 +382,7 @@ class AnalysisReport(AnalysisModel):
             raise ValueError("Chart IDs must be unique.")
         if not (self.metrics or self.charts or self.events):
             raise ValueError("Provide at least one metric, chart or event for the analysis view.")
-        if sum(len(s.points) for c in self.charts for s in c.series) > 1200:
+        if sum(chart.data_size() for chart in self.charts) > 1200:
             raise ValueError("Report has too many chart points; summarize or split it.")
         for item in [*self.metrics, *self.charts, *self.events]:
             if len(set(item.source_ids)) != len(item.source_ids) or not set(item.source_ids).issubset(sources):

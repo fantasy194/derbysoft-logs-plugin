@@ -705,7 +705,7 @@
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.7.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.8.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
         await readSettings(); flushUiAction();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }

@@ -6,15 +6,17 @@ DerbySoft 内部日志调查插件：结合业务 PerfLog、StreamLog 请求/响
 
 开发与维护前阅读 [AGENTS.md](AGENTS.md)，了解业务语义、配置约定、验证方法与分发边界。
 
-分析结果会按问题选择交互趋势图、分类对比或请求时间线，并保留环境、时间范围、数据来源与完整性提示。查询工具先返回结构化数据，由模型分析后调用独立渲染工具；支持 MCP Apps 的宿主可直接显示，其他客户端保留简洁文字和表格。详见 [可视化分析](plugins/derbysoft-logs/README.md#可视化分析)。
+分析结果会按问题选择图表，并保留环境、时间范围、数据来源与完整性提示。常规统计优先使用宿主可用的原生图表；插件同时提供完整的 MCP Apps 备用图表和请求时间线。不支持交互显示的客户端保留简洁文字和表格。详见 [可视化分析](plugins/derbysoft-logs/README.md#可视化分析)。
 
 ## 安装
 
 需要已安装 Codex 和 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并能访问此私有 Git 仓库及公司日志服务。`uv` 使用锁文件安装依赖，并管理兼容的 Python 运行时；首次安装依赖可能需要访问包仓库。
 
-推荐在 Codex 桌面应用中安装：打开 **Plugins → Add → Add a marketplace**，填写本仓库的 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；然后在 marketplace 中选择 **DerbySoft Logs 0.7.0** 安装。访问私有 Git 仓库前，需要配置有权读取该仓库的 Git 认证。
+推荐在 Codex 桌面应用中安装：打开 **Plugins → Add → Add a marketplace**，填写本仓库的 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；然后在 marketplace 中选择 **DerbySoft Logs 0.8.0** 安装。访问私有 Git 仓库前，需要配置有权读取该仓库的 Git 认证。
 
 安装后在插件详情页打开 **DerbySoft Logs** 设置；新版本安装或刷新后如工具未出现，重新打开插件或启动新会话。曾安装旧版 `derbysoft-logs-local` 的用户可以在插件目录停用旧副本，避免工具重复。
+
+已安装的 Git marketplace 可在 **Settings → Plugins → Marketplace → DerbySoft Logs → Upgrade** 更新，再检查插件详情页的版本。推送 GitHub 不会立即更新每台电脑的安装。
 
 支持插件命令且本机 Codex CLI 配置正常时，也可使用 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再运行 `codex plugin add derbysoft-logs@derbysoft-logs`。本地检出可使用 `scripts/install.ps1` 或 `scripts/install.sh`；这两个脚本同样依赖可用的 CLI，不是桌面界面的前置步骤。
 

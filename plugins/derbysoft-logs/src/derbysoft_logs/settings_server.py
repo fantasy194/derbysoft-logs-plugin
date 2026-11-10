@@ -21,7 +21,7 @@ READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_h
 WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 ONE_USE = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=False)
 DELETE = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False, open_world_hint=False)
-mcp = MCPServer("DerbySoft Logs Settings", version="0.7.0")
+mcp = MCPServer("DerbySoft Logs Settings", version="0.8.0")
 
 # MCP SDK 2.3 validates SEP-2133 reverse-DNS identifiers in its Extension
 # helper; OpenAI's existing extension ID is `openai/settings`. Populate the

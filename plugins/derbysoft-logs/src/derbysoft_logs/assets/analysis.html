@@ -8,6 +8,7 @@
     :root{color-scheme:light;--bg:#fff;--card:#f8fafc;--ink:#202936;--sub:#647184;--border:#dfe6ee;--accent:#256bcd;--accent2:#12a88a;--warn:#9a5b05;--warn-bg:#fff5df;--track:#e6edf4;--font:var(--font-sans,system-ui,-apple-system,"Segoe UI",sans-serif)}
     :root[data-theme=dark]{color-scheme:dark;--bg:#191b20;--card:#23262d;--ink:#f2f5f8;--sub:#a8b1bf;--border:#3b414d;--accent:#82b6ff;--accent2:#5ed5ba;--warn:#ffd186;--warn-bg:#493721;--track:#383e49}
     [hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--color-background-primary,var(--bg));color:var(--color-text-primary,var(--ink));font:14px/1.5 var(--font)}main{padding:20px;max-width:1200px;margin:auto;overflow-wrap:anywhere}h1,h2,h3,p{margin:0}h1{font-size:20px;line-height:1.3;letter-spacing:-.02em}h2{font-size:16px;line-height:1.3}h3{font-size:14px;line-height:1.4}.summary{font-size:14px;color:var(--color-text-secondary,var(--sub));margin-top:8px;white-space:pre-wrap}.eyebrow{font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.08em;margin-bottom:5px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.tag{border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--sub);font-size:12px;max-width:100%}.coverage{border:1px solid transparent;border-radius:9px;background:var(--warn-bg);color:var(--warn);padding:10px 12px;margin-top:14px;white-space:pre-wrap}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:18px}.metric,.chart,.events,.sources{border:1px solid var(--border);border-radius:12px;background:var(--color-background-secondary,var(--card))}.metric{padding:12px 14px}.metric-label{font-size:12px;color:var(--sub)}.metric-value{font-size:22px;line-height:1.25;margin-top:4px;font-weight:650;font-variant-numeric:tabular-nums}.unit{font-size:12px;font-weight:500;color:var(--sub);margin-left:4px}.stack{display:grid;gap:12px;margin-top:16px}.chart,.events,.sources{padding:14px;min-width:0}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.actions,.legend{display:flex;gap:5px;flex-wrap:wrap}.legend{margin:12px 0 5px}button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--border);border-radius:7px;background:transparent;padding:4px 8px}button:hover{border-color:var(--sub)}button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.selected{background:var(--track)}.series-button{font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--dot)}.series-button[aria-pressed=false]{opacity:.5}.chart-area{min-width:0;margin-top:10px}.chart-svg{width:100%;height:auto;display:block;overflow:visible}.gridline{stroke:var(--border);stroke-width:1}.axis-label{fill:var(--sub);font-size:18px;font-family:var(--font)}.line{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.point{stroke:var(--color-background-secondary,var(--card));stroke-width:2;cursor:pointer}.point:hover,.point:focus{stroke-width:3}.bars{display:grid;gap:10px;margin-top:12px}.bar-row{display:grid;grid-template-columns:minmax(62px,140px) 1fr minmax(42px,auto);gap:9px;align-items:center}.bar-label{font-size:12px;overflow-wrap:anywhere}.bar-track{height:13px;position:relative;background:var(--track);border-radius:4px}.bar-zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--sub);opacity:.7}.bar-fill{position:absolute;height:100%;border-radius:3px;background:var(--bar)}.bar-value{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}.empty{color:var(--sub);font-size:13px;padding:20px 0}.point-detail{font-size:12px;color:var(--sub);min-height:19px;margin-top:6px}.table-wrap{overflow:auto;margin-top:10px}table{border-collapse:collapse;min-width:100%;font-size:12px}th,td{text-align:left;border-bottom:1px solid var(--border);padding:7px 8px;vertical-align:top}th{color:var(--sub);font-weight:600}td{font-variant-numeric:tabular-nums}.event-list{margin:12px 0 0;padding:0;list-style:none}.event{position:relative;padding:0 0 14px 18px;border-left:1px solid var(--border);margin-left:5px}.event:last-child{padding-bottom:0;border-left-color:transparent}.event:before{content:"";position:absolute;width:9px;height:9px;left:-5px;top:5px;border-radius:50%;background:var(--sub)}.event[data-status=success]:before{background:var(--accent2)}.event[data-status=warning]:before{background:#d89322}.event[data-status=error]:before{background:#d85d64}.event-time{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.event-title{font-size:13px;font-weight:600}.event-context,.event-detail{font-size:12px;color:var(--sub);white-space:pre-wrap}.event-detail{padding-top:5px}.source-list{margin-top:10px;display:grid;gap:8px}.source{border-top:1px solid var(--border);padding-top:8px;font-size:12px}.source:first-child{border:0;padding-top:0}.source-meta{color:var(--sub);white-space:pre-wrap}.source-title{font-weight:600}.source-note{margin-top:4px}.source-ref{display:inline-block;color:var(--sub);font-size:11px;border:0;padding:0;margin-top:5px;text-decoration:underline;text-underline-offset:3px}.notes{color:var(--sub);font-size:12px;margin:12px 0 0;padding-left:18px}.status{padding:24px 2px;color:var(--sub)}.error{color:var(--warn)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}summary{cursor:pointer}details>summary::marker{color:var(--sub)}
+    .chart-key{display:flex;flex-wrap:wrap;gap:5px 14px;margin:8px 0;color:var(--sub);font-size:12px}.chart-key span{display:inline-flex;align-items:center}.chart-note{margin-top:6px;color:var(--sub);font-size:12px}.svg-scroll,.heat-scroll{overflow-x:auto;max-width:100%}.svg-scroll .wide-chart{min-width:640px}.heat-grid{border-collapse:separate;border-spacing:3px;width:max-content;max-width:none}.heat-grid th,.heat-grid td{border:0;padding:0;text-align:center}.heat-grid th{padding:4px 8px;white-space:nowrap}.heat-cell{min-width:52px;min-height:36px;border-radius:4px;padding:5px;color:var(--ink);background:var(--heat, var(--track));font-variant-numeric:tabular-nums}.heat-cell.missing{background:repeating-linear-gradient(135deg,var(--track),var(--track) 4px,var(--card) 4px,var(--card) 8px)}.stack-track{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--track)}.stack-piece{border:0;border-radius:0;padding:0;min-width:0;height:100%;background:var(--bar)}.stack-piece:focus-visible{outline-offset:-3px}.chart-svg .mark{cursor:pointer}.chart-svg .mark:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.chart-svg .chart-text{fill:var(--sub);font:13px var(--font)}
     @media(max-width:440px){main{padding:14px}.chart,.events,.sources{padding:12px}.bar-row{grid-template-columns:minmax(54px,90px) 1fr minmax(36px,auto);gap:6px}.metric-value{font-size:20px}}
   </style>
 </head>
@@ -72,21 +73,68 @@
     if (!payload || payload.schema_version !== 1 || !payload.report || typeof payload.report !== 'object') return false;
     const r = payload.report;
     if (typeof r.title !== 'string' || !r.title || typeof r.summary !== 'string' || !Array.isArray(r.sources) || !r.sources.length) return false;
-    if (!['metrics', 'charts', 'events', 'notes'].every(k => Array.isArray(r[k]))) return false;
+    if (!['metrics', 'charts', 'events', 'notes'].every(k => Array.isArray(r[k])) || r.sources.length>16 || r.metrics.length>12 || r.charts.length>6 || r.events.length>150 || r.notes.length>8) return false;
     const ids = new Set();
     for (const s of r.sources) {
       if (!s || typeof s.id !== 'string' || ids.has(s.id) || typeof s.tool !== 'string' || typeof s.environment !== 'string' || typeof s.scope !== 'string' || !['complete', 'partial', 'sample', 'unknown'].includes(s.coverage)) return false;
       ids.add(s.id);
     }
-    const refs = x => Array.isArray(x) && x.length > 0 && x.every(id => ids.has(id));
+    const refs = x => Array.isArray(x) && x.length > 0 && x.length <= 16 && new Set(x).size === x.length && x.every(id => ids.has(id));
     if (!r.metrics.every(m => m && typeof m.label === 'string' && typeof m.value === 'number' && Number.isFinite(m.value) && typeof m.unit === 'string' && refs(m.source_ids))) return false;
+    const number = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x)<=Number.MAX_SAFE_INTEGER;
+    const str = x => typeof x === 'string' && x.trim().length > 0 && x.length<=200;
+    const nonnegative = x => number(x) && x >= 0;
+    const unique = items => new Set(items).size === items.length;
+    let observations=0;
+    if (!unique(r.charts.map(c=>c?.id))) return false;
     for (const c of r.charts) {
-      if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || !['bar', 'line'].includes(c.kind) || typeof c.unit !== 'string' || !Array.isArray(c.series) || !refs(c.source_ids)) return false;
-      for (const s of c.series) {
-        if (!s || typeof s.name !== 'string' || !Array.isArray(s.points)) return false;
-        for (const p of s.points) if (!p || typeof p.x !== 'string' || p.y !== null && (typeof p.y !== 'number' || !Number.isFinite(p.y)) || c.kind === 'line' && ns(p.x) === null) return false;
-      }
+      if (!c || !str(c.id) || !str(c.title) || typeof c.unit !== 'string' || !refs(c.source_ids)) return false;
+      if (['bar', 'line', 'area', 'stacked_bar'].includes(c.kind)) {
+        if (!str(c.x_label) || !Array.isArray(c.series) || !c.series.length || c.series.length>8 || !unique(c.series.map(s=>s?.name)) || !c.series.every(s =>
+          s && str(s.name) && Array.isArray(s.points) && s.points.length<=400 && s.points.every(p =>
+            p && str(p.x) && (p.y === null || number(p.y)) && (!['line','area'].includes(c.kind) || ns(p.x) !== null)))) return false;
+        for(const s of c.series) {
+          observations+=s.points.length;
+          if (!unique(s.points.map(p=>['line','area'].includes(c.kind)?String(ns(p.x)):p.x))) return false;
+        }
+        if (c.kind !== 'stacked_bar' && c.mode !== undefined && c.mode !== null) return false;
+        if (c.kind === 'stacked_bar' && (!['absolute', 'percent'].includes(c.mode || 'absolute') ||
+          !c.series[0].points.length ||
+          c.series.some(s => s.points.some(p => !nonnegative(p.y))) ||
+          c.series.some(s => s.points.length !== c.series[0].points.length || s.points.some((p,i) => p.x !== c.series[0].points[i].x)) ||
+          c.series[0].points.some((_,i)=>{const total=c.series.reduce((sum,s)=>sum+s.points[i].y,0);return !number(total) || c.mode==='percent' && total<=0;}))) return false;
+      } else if (['pie','donut'].includes(c.kind)) {
+        if (!Array.isArray(c.slices) || !c.slices.length || c.slices.length>40 || !c.slices.every(p => p && str(p.label) && nonnegative(p.value)) || !unique(c.slices.map(p=>p.label))) return false;
+        const total=c.slices.reduce((sum,p)=>sum+p.value,0);
+        if (!number(total) || total<=0) return false;
+        observations+=c.slices.length;
+      } else if (c.kind === 'histogram') {
+        if (!str(c.x_label) || !Array.isArray(c.bins) || !c.bins.length || c.bins.length>120 || !c.bins.every((p,i) => p && number(p.lower) && number(p.upper) && p.lower < p.upper && Number.isSafeInteger(p.count) && p.count>=0 && Number.isFinite(p.count/(p.upper-p.lower)) && (!i || c.bins[i-1].upper<=p.lower)) || !number(c.bins.reduce((sum,p)=>sum+p.count,0))) return false;
+        observations+=c.bins.length;
+      } else if (c.kind === 'heatmap') {
+        if (!str(c.x_label) || !str(c.y_label) || !Array.isArray(c.cells) || !c.cells.length || c.cells.length>400 || !c.cells.every(p => p && str(p.x) && str(p.y) && (p.value === null || number(p.value))) || !unique(c.cells.map(p=>JSON.stringify([p.x,p.y]))) || new Set(c.cells.map(p=>p.x)).size > 40 || new Set(c.cells.map(p=>p.y)).size > 40) return false;
+        observations+=c.cells.length;
+      } else if (c.kind === 'scatter') {
+        if (!str(c.x_label) || !str(c.y_label) || !Array.isArray(c.points) || !c.points.length || c.points.length>400 || !c.points.every(p => p && number(p.x) && number(p.y) && (p.label === undefined || typeof p.label === 'string' && p.label.length<=200))) return false;
+        observations+=c.points.length;
+      } else if (c.kind === 'funnel') {
+        if (!Array.isArray(c.stages) || !c.stages.length || c.stages.length>40 || !c.stages.every(p => p && str(p.label) && nonnegative(p.value)) || !unique(c.stages.map(p=>p.label))) return false;
+        observations+=c.stages.length;
+      } else if (c.kind === 'boxplot') {
+        if (!Array.isArray(c.boxes) || !c.boxes.length || c.boxes.length>40 || !c.boxes.every(p => p && str(p.label) && ['min','q1','median','q3','max'].every(k => number(p[k])) && p.min <= p.q1 && p.q1 <= p.median && p.median <= p.q3 && p.q3 <= p.max) || !unique(c.boxes.map(p=>p.label))) return false;
+        observations+=c.boxes.length;
+      } else if (c.kind === 'sankey') {
+        if (!Array.isArray(c.nodes) || c.nodes.length<2 || c.nodes.length>40 || !Array.isArray(c.links) || !c.links.length || c.links.length>120 || !c.nodes.every(p => p && str(p.id) && str(p.label)) || !unique(c.nodes.map(n=>n.id)) || !c.links.every(p => p && str(p.source) && str(p.target) && number(p.value) && p.value > 0 && c.nodes.some(n => n.id === p.source) && c.nodes.some(n => n.id === p.target)) || !unique(c.links.map(p=>JSON.stringify([p.source,p.target]))) || !number(c.links.reduce((sum,p)=>sum+p.value,0))) return false;
+        const indegree=new Map(c.nodes.map(n=>[n.id,0]));
+        for(const link of c.links) indegree.set(link.target,indegree.get(link.target)+1);
+        const queue=[...indegree.keys()].filter(id=>indegree.get(id)===0);
+        let visited=0;
+        while(queue.length){const id=queue.pop();visited++;for(const link of c.links.filter(l=>l.source===id)){indegree.set(link.target,indegree.get(link.target)-1);if(indegree.get(link.target)===0)queue.push(link.target);}}
+        if(visited!==c.nodes.length) return false;
+        observations+=c.nodes.length+c.links.length;
+      } else return false;
     }
+    if (observations>1200) return false;
     return r.events.every(e => e && ns(e.timestamp) !== null && typeof e.label === 'string' && typeof e.service === 'string' && typeof e.process === 'string' && typeof e.detail === 'string' && ['info', 'success', 'warning', 'error', 'unknown'].includes(e.status) && refs(e.source_ids)) && r.notes.every(x => typeof x === 'string');
   }
   function receive(params) {
@@ -172,6 +220,7 @@
       actions = el('div', 'actions'),
       plot = el('button', 'selected', '图表'),
       table = el('button', '', '数据');
+    box.dataset.chartKind = chart.kind;
     plot.type = table.type = 'button';
     plot.setAttribute('aria-pressed', 'true');
     table.setAttribute('aria-pressed', 'false');
@@ -184,24 +233,41 @@
     const legend = el('div', 'legend'),
       area = el('div', 'chart-area'),
       detail = el('div', 'point-detail', '选择数据点查看精确值'),
-      enabled = new Set(chart.series.map((_, i) => i));
+      series = chart.series || [],
+      enabled = new Set(series.map((_, i) => i));
+    detail.setAttribute('aria-live', 'polite');
     function draw() {
       area.replaceChildren();
-      if (chart.kind === 'bar') drawBars(area, chart, enabled, detail);else drawLine(area, chart, enabled, detail);
+      if (chart.kind === 'bar') drawBars(area, chart, enabled, detail);
+      else if (chart.kind === 'line' || chart.kind === 'area') drawLine(area, chart, enabled, detail);
+      else if (chart.kind === 'stacked_bar') drawStacked(area, chart, detail);
+      else if (chart.kind === 'pie' || chart.kind === 'donut') drawPie(area, chart, detail);
+      else if (chart.kind === 'histogram') drawHistogram(area, chart, detail);
+      else if (chart.kind === 'heatmap') drawHeatmap(area, chart, detail);
+      else if (chart.kind === 'scatter') drawScatter(area, chart, detail);
+      else if (chart.kind === 'funnel') drawFunnel(area, chart, detail);
+      else if (chart.kind === 'boxplot') drawBoxplot(area, chart, detail);
+      else if (chart.kind === 'sankey') drawSankey(area, chart, detail);
     }
-    chart.series.forEach((s, i) => {
+    series.forEach((s, i) => {
       const b = el('button', 'series-button', s.name),
         dot = el('span', 'dot');
       dot.style.setProperty('--dot', colors[i % colors.length]);
       b.prepend(dot);
       b.type = 'button';
       b.setAttribute('aria-pressed', 'true');
-      b.addEventListener('click', () => {
-        if (enabled.has(i)) enabled.delete(i);else enabled.add(i);
-        b.setAttribute('aria-pressed', String(enabled.has(i)));
-        draw();
-      });
-      legend.append(b);
+      if (chart.kind === 'stacked_bar') {
+        const label = el('span', 'series-button', s.name);
+        label.prepend(dot);
+        legend.append(label);
+      } else {
+        b.addEventListener('click', () => {
+          if (enabled.has(i)) enabled.delete(i);else enabled.add(i);
+          b.setAttribute('aria-pressed', String(enabled.has(i)));
+          draw();
+        });
+        legend.append(b);
+      }
     });
     box.append(legend, area, detail);
     function setMode(showTable) {
@@ -224,13 +290,44 @@
       table = el('table'),
       head = el('thead'),
       tr = el('tr');
-    for (const x of [chart.x_label || '时间 / 类别', '系列', '值' + (chart.unit ? ' (' + chart.unit + ')' : '')]) tr.append(el('th', '', x));
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'region');
+    wrap.setAttribute('aria-label', chart.title + ' 数据，可滚动');
+    const valueTitle = '值' + (chart.unit ? ' (' + chart.unit + ')' : '');
+    let headers = [], rows = [];
+    if (chart.series) {
+      headers = [chart.x_label || '时间 / 类别', '系列', valueTitle];
+      for (const s of chart.series) for (const p of s.points) rows.push([p.x, s.name, p.y]);
+    } else if (chart.slices) {
+      headers = ['类别', valueTitle];
+      rows = chart.slices.map(p => [p.label, p.value]);
+    } else if (chart.bins) {
+      headers = ['下界 (' + chart.x_label + ')', '上界 (' + chart.x_label + ')', valueTitle];
+      rows = chart.bins.map(p => [p.lower, p.upper, p.count]);
+    } else if (chart.cells) {
+      headers = [chart.x_label, chart.y_label, valueTitle];
+      rows = chart.cells.map(p => [p.x, p.y, p.value]);
+    } else if (chart.points) {
+      headers = [chart.x_label, chart.y_label, '标签'];
+      rows = chart.points.map(p => [p.x, p.y, p.label || '']);
+    } else if (chart.stages) {
+      headers = ['阶段', valueTitle];
+      rows = chart.stages.map(p => [p.label, p.value]);
+    } else if (chart.boxes) {
+      headers = ['类别', '最小值', 'Q1', '中位数', 'Q3', '最大值'];
+      rows = chart.boxes.map(p => [p.label, p.min, p.q1, p.median, p.q3, p.max]);
+    } else if (chart.links) {
+      headers = ['来源', '目标', valueTitle];
+      const labels = new Map(chart.nodes.map(n => [n.id, n.label]));
+      rows = chart.links.map(p => [labels.get(p.source), labels.get(p.target), p.value]);
+    }
+    for (const x of headers) tr.append(el('th', '', x));
     head.append(tr);
     table.append(head);
     const body = el('tbody');
-    for (const s of chart.series) for (const p of s.points) {
+    for (const values of rows) {
       const row = el('tr');
-      row.append(el('td', '', p.x), el('td', '', s.name), el('td', '', fmt(p.y)));
+      for (const value of values) row.append(el('td', '', fmt(value)));
       body.append(row);
     }
     table.append(body);
@@ -270,6 +367,7 @@
       track.append(baseline);
       if (p.y !== null) {
         const fill = el('div', 'bar-fill');
+        fill.dataset.geometry = 'bar';
         fill.style.left = Math.min(zero, (p.y - min) / span * 100) + '%';
         fill.style.width = Math.abs(p.y) / span * 100 + '%';
         fill.style.setProperty('--bar', colors[i % colors.length]);
@@ -279,6 +377,7 @@
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
       row.setAttribute('aria-label', `${p.x}, ${s.name}, ${fmt(p.y)} ${chart.unit}`);
+      row.title = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
       const select = () => detail.textContent = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
       row.addEventListener('click', select);
       row.addEventListener('keydown', e => {
@@ -309,8 +408,8 @@
     const times = points.map(x => x.t),
       tMin = times.reduce((a, b) => a < b ? a : b),
       tMax = times.reduce((a, b) => a > b ? a : b),
-      yMin = Math.min(...nums),
-      yMax = Math.max(...nums),
+      yMin = chart.kind === 'area' ? Math.min(0, ...nums) : Math.min(...nums),
+      yMax = chart.kind === 'area' ? Math.max(0, ...nums) : Math.max(...nums),
       ySpan = yMax - yMin || 1,
       W = 600,
       H = 220,
@@ -350,6 +449,20 @@
       let d = '',
         open = false;
       const ordered = [...s.points].sort((a, b) => ns(a.x) < ns(b.x) ? -1 : ns(a.x) > ns(b.x) ? 1 : 0);
+      if (chart.kind === 'area') {
+        let run = [];
+        const closeRun = () => {
+          if (!run.length) return;
+          const baseline = y(0);
+          const path = 'M ' + run[0][0] + ' ' + baseline + run.map(([xx,yy]) => ' L ' + xx + ' ' + yy).join('') + ' L ' + run[run.length-1][0] + ' ' + baseline + ' Z';
+          graph.append(svg('path', {d:path, fill:colors[i % colors.length], 'fill-opacity':'.22', 'data-geometry':'area'}));
+          run = [];
+        };
+        for (const p of ordered) {
+          if (p.y === null) closeRun(); else run.push([x(ns(p.x)), y(p.y)]);
+        }
+        closeRun();
+      }
       for (const p of ordered) {
         if (p.y === null) {
           open = false;
@@ -363,6 +476,7 @@
       if (d) graph.append(svg('path', {
         d,
         class: 'line',
+        'data-geometry': 'line',
         stroke: colors[i % colors.length]
       }));
       for (const p of s.points) {
@@ -379,6 +493,9 @@
           'data-value': p.y,
           'aria-label': `${s.name}, ${p.x}, ${p.y} ${chart.unit}`
         });
+        const tip = svg('title');
+        tip.textContent = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
+        circle.append(tip);
         const select = () => detail.textContent = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
         circle.addEventListener('click', select);
         circle.addEventListener('keydown', e => {
@@ -404,6 +521,272 @@
     end.style.textAlign = 'right';
     axis.append(start, end);
     area.append(axis);
+  }
+  // All displayed labels use textContent. Marks are reachable by mouse,
+  // keyboard and assistive technology; their values match the data table.
+  function mark(node, kind, label, detail) {
+    node.setAttribute('data-geometry', kind);
+    node.setAttribute('class', ((node.getAttribute('class') || '') + ' mark').trim());
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('role', 'button');
+    node.setAttribute('aria-label', label);
+    const tip = svg('title');
+    tip.textContent = label;
+    node.append(tip);
+    const select = () => { detail.textContent = label; };
+    node.addEventListener('click', select);
+    node.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
+    });
+    return node;
+  }
+  function graphFor(chart, width, height) {
+    return svg('svg', {viewBox:`0 0 ${width} ${height}`, class:'chart-svg', role:'group', 'aria-label':chart.title});
+  }
+  function numberText(value) {
+    if (!Number.isFinite(value)) return '—';
+    return String(Number(value.toPrecision(5)));
+  }
+  function svgText(graph, x, y, text, anchor='start') {
+    const node = svg('text', {x, y, 'text-anchor':anchor, class:'chart-text'});
+    node.textContent = text;
+    graph.append(node);
+  }
+  function drawStacked(area, chart, detail) {
+    const categories = chart.series[0].points.map(p => p.x);
+    if (!categories.length) { area.append(el('div', 'empty', '没有可绘制的数据。')); return; }
+    const totals = categories.map((_, i) => chart.series.reduce((sum, s) => sum + s.points[i].y, 0));
+    const max = chart.mode === 'percent' ? 1 : Math.max(...totals, 0);
+    const rows = el('div', 'bars');
+    categories.forEach((label, index) => {
+      const row = el('div', 'bar-row'), track = el('div', 'stack-track');
+      chart.series.forEach((series, sIndex) => {
+        const value = series.points[index].y;
+        const width = chart.mode === 'percent' ? (totals[index] ? value / totals[index] : 0) : (max ? value / max : 0);
+        if (!value) return; // Actual zero remains available in the exact data table.
+        const segment = el('button', 'stack-piece');
+        segment.type = 'button';
+        segment.tabIndex = 0;
+        segment.dataset.geometry = 'stacked_bar';
+        segment.style.width = (width * 100) + '%';
+        segment.style.setProperty('--bar', colors[sIndex % colors.length]);
+        const share = totals[index] ? ' · ' + numberText(value / totals[index] * 100) + '%' : '';
+        const text = `${label} · ${series.name}: ${value} ${chart.unit}${share} (总计 ${totals[index]})`;
+        segment.setAttribute('aria-label', text);
+        segment.title = text;
+        segment.addEventListener('click', () => { detail.textContent = text; });
+        track.append(segment);
+      });
+      row.append(el('div','bar-label',label), track, el('div','bar-value',fmt(totals[index])));
+      rows.append(row);
+    });
+    area.append(rows);
+    if (chart.mode === 'percent') area.append(el('div','chart-note','每行按完整组的总数计算占比；右侧为原始总数。'));
+  }
+  function drawPie(area, chart, detail) {
+    const total = chart.slices.reduce((sum,p) => sum + p.value,0);
+    const graph = graphFor(chart, 240, 240);
+    const cx=120, cy=120, outer=105, inner=chart.kind === 'donut' ? 59 : 0;
+    const pt = (r,a) => [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+    let start = -Math.PI/2;
+    chart.slices.forEach((p,i) => {
+      const portion = p.value / total;
+      if (!portion) return;
+      const end = start + 2*Math.PI*portion;
+      const [x1,y1]=pt(outer,start), [x2,y2]=pt(outer,end);
+      let d;
+      if (portion > 1-1e-12) {
+        const [xm,ym]=pt(outer,start+Math.PI);
+        d = `M ${x1} ${y1} A ${outer} ${outer} 0 1 1 ${xm} ${ym} A ${outer} ${outer} 0 1 1 ${x1} ${y1}`;
+        if (inner) {
+          const [ix,iy]=pt(inner,start), [imx,imy]=pt(inner,start+Math.PI);
+          d += ` L ${ix} ${iy} A ${inner} ${inner} 0 1 0 ${imx} ${imy} A ${inner} ${inner} 0 1 0 ${ix} ${iy} Z`;
+        } else d += ' Z';
+      } else if (inner) {
+        const [ix1,iy1]=pt(inner,start), [ix2,iy2]=pt(inner,end);
+        d = `M ${x1} ${y1} A ${outer} ${outer} 0 ${portion>.5?1:0} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${inner} ${inner} 0 ${portion>.5?1:0} 0 ${ix1} ${iy1} Z`;
+      } else {
+        d = `M ${cx} ${cy} L ${x1} ${y1} A ${outer} ${outer} 0 ${portion>.5?1:0} 1 ${x2} ${y2} Z`;
+      }
+      const path = svg('path',{d,fill:colors[i%colors.length],stroke:'var(--card)','stroke-width':1});
+      graph.append(mark(path,chart.kind,`${p.label}: ${p.value} ${chart.unit} · ${numberText(portion*100)}% (总计 ${total})`,detail));
+      start = end;
+    });
+    const panel = el('div','pie-figure');
+    panel.style.cssText = 'max-width:300px;margin:0 auto';
+    panel.append(graph);
+    area.append(panel);
+    const key = el('div','chart-key');
+    chart.slices.forEach((p,i) => {
+      const item=el('span','',`${p.label}: ${p.value} ${chart.unit} · ${numberText(p.value/total*100)}%`);
+      const dot=el('i','dot'); dot.style.setProperty('--dot',colors[i%colors.length]); item.prepend(dot); key.append(item);
+    });
+    area.append(key);
+  }
+  function drawHistogram(area, chart, detail) {
+    const bins=chart.bins, left=105, right=16, top=22, bottom=42, w=600, h=260;
+    const low=Math.min(...bins.map(p=>p.lower)), high=Math.max(...bins.map(p=>p.upper));
+    const density=bins.map(p=>p.count/(p.upper-p.lower));
+    if (density.some(v=>!Number.isFinite(v))) { area.append(el('div','empty','分箱数值超出可绘制范围，请查看数据表。')); return; }
+    const max=Math.max(...density,0), scaleX=v=>left+(v-low)/(high-low)*(w-left-right);
+    const scaleY=v=>top+(max ? (1-v/max) : 1)*(h-top-bottom);
+    const graph=graphFor(chart,w,h);
+    graph.append(svg('line',{x1:left,y1:h-bottom,x2:w-right,y2:h-bottom,class:'gridline'}));
+    bins.forEach((p,i)=>{
+      const x=scaleX(p.lower), y=scaleY(density[i]), width=Math.max(0,scaleX(p.upper)-x), height=h-bottom-y;
+      const rect=svg('rect',{x,y,width,height,fill:colors[0],stroke:'var(--card)','stroke-width':1});
+      graph.append(mark(rect,'histogram',`[${p.lower}, ${p.upper}): ${p.count} ${chart.unit} · 密度 ${numberText(density[i])}`,detail));
+    });
+    svgText(graph,left,h-18,numberText(low)); svgText(graph,w-right,h-18,numberText(high),'end');
+    svgText(graph,left-8,top+5,numberText(max),'end');
+    svgText(graph,left-8,h-bottom,'0','end');
+    area.append(graph,el('div','chart-note',`${chart.x_label}：${low} – ${high}；纵轴：数量密度。区间为 [下界, 上界)，空档表示未提供数据。柱的面积表示原始数量。`));
+  }
+  function drawHeatmap(area, chart, detail) {
+    const xs=[...new Set(chart.cells.map(p=>p.x))], ys=[...new Set(chart.cells.map(p=>p.y))];
+    const lookup=new Map(chart.cells.map(p=>[JSON.stringify([p.x,p.y]),p.value]));
+    const values=chart.cells.map(p=>p.value).filter(v=>v!==null);
+    const min=values.length?Math.min(...values):0,max=values.length?Math.max(...values):0;
+    const wrap=el('div','heat-scroll'), table=el('table','heat-grid');
+    wrap.tabIndex=0;
+    wrap.setAttribute('role','region');
+    wrap.setAttribute('aria-label',chart.title+'，表格可滚动');
+    table.setAttribute('aria-label',chart.title);
+    const head=el('thead'), header=el('tr'); header.append(el('th','',chart.y_label+' / '+chart.x_label));
+    for(const x of xs) header.append(el('th','',x));
+    head.append(header);table.append(head);
+    const body=el('tbody');
+    for(const y of ys) {
+      const row=el('tr');row.append(el('th','',y));
+      for(const x of xs) {
+        const value=lookup.has(JSON.stringify([x,y]))?lookup.get(JSON.stringify([x,y])):null;
+        const td=el('td'), b=el('button','heat-cell'+(value===null?' missing':''),fmt(value));
+        b.type='button';b.tabIndex=0;b.dataset.geometry='heatmap';
+        if(value!==null) {
+          const strength = max===min ? 30 : 15+(value-min)/(max-min)*30;
+          b.style.setProperty('--heat',`color-mix(in srgb, var(--accent) ${strength}%, var(--card))`);
+        }
+        const text=`${chart.x_label}: ${x} · ${chart.y_label}: ${y} · ${fmt(value)} ${chart.unit}`;
+        b.setAttribute('aria-label',text);b.title=text;b.addEventListener('click',()=>{detail.textContent=text;});
+        td.append(b);row.append(td);
+      }
+      body.append(row);
+    }
+    table.append(body);wrap.append(table);area.append(wrap);
+    const scrollHint=xs.length>4?' 表格可左右滚动。':'';
+    area.append(el('div','chart-note',(values.length?`颜色范围：${min} – ${max} ${chart.unit}；阴影表示缺失。`:'阴影表示缺失。')+scrollHint));
+  }
+  function drawScatter(area, chart, detail) {
+    const left=105,right=20,top=20,bottom=38,w=600,h=260, points=chart.points;
+    const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
+    const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
+    const x=v=>maxX===minX?(left+w-right)/2:left+(v-minX)/(maxX-minX)*(w-left-right);
+    const y=v=>maxY===minY?(top+h-bottom)/2:h-bottom-(v-minY)/(maxY-minY)*(h-top-bottom);
+    const graph=graphFor(chart,w,h);
+    graph.append(svg('line',{x1:left,y1:h-bottom,x2:w-right,y2:h-bottom,class:'gridline'}),svg('line',{x1:left,y1:top,x2:left,y2:h-bottom,class:'gridline'}));
+    svgText(graph,left,h-17,numberText(minX));svgText(graph,w-right,h-17,numberText(maxX),'end');
+    svgText(graph,left-6,top+5,numberText(maxY),'end');svgText(graph,left-6,h-bottom,numberText(minY),'end');
+    for (const p of points) {
+      const dot=svg('circle',{cx:x(p.x),cy:y(p.y),r:5,fill:colors[0],stroke:'var(--card)','stroke-width':1});
+      const single=`${p.label ? p.label+' · ' : ''}${chart.x_label}: ${p.x} · ${chart.y_label}: ${p.y}`;
+      mark(dot,'scatter',single,detail);
+      const coincident=points.filter(other=>other.x===p.x && other.y===p.y);
+      if(coincident.length>1){
+        const grouped=`重合 ${coincident.length} 个观测 · ${chart.x_label}: ${p.x} · ${chart.y_label}: ${p.y} · `+coincident.map((point,i)=>point.label||`观测 ${i+1}`).join('、');
+        dot.querySelector('title').textContent=grouped;
+        dot.addEventListener('mouseenter',()=>{detail.textContent=grouped;});
+        dot.addEventListener('click',()=>{detail.textContent=grouped;});
+      }
+      graph.append(dot);
+    }
+    const overlap=points.some((p,i)=>points.findIndex(q=>q.x===p.x&&q.y===p.y)!==i);
+    area.append(graph,el('div','chart-note',`横轴 ${chart.x_label}：${minX} – ${maxX}；纵轴 ${chart.y_label}：${minY} – ${maxY}`+(overlap?'。存在重合点，鼠标悬停可查看整组，键盘可逐个查看。':'')));
+  }
+  function drawFunnel(area, chart, detail) {
+    const stages=chart.stages,w=600,rowHeight=44,h=stages.length*rowHeight+16,max=Math.max(...stages.map(p=>p.value),0),graph=graphFor(chart,w,h);
+    stages.forEach((p,i)=>{
+      const width=max?p.value/max*420:0, next=i+1<stages.length?(max?stages[i+1].value/max*420:0):width;
+      const y=i*rowHeight+8, center=w/2;
+      const shape=svg('path',{d:`M ${center-width/2} ${y} L ${center+width/2} ${y} L ${center+next/2} ${y+rowHeight-3} L ${center-next/2} ${y+rowHeight-3} Z`,fill:colors[i%colors.length],stroke:'var(--card)','stroke-width':1});
+      graph.append(mark(shape,'funnel',`${p.label}: ${p.value} ${chart.unit}`,detail));
+      svgText(graph,center,y+rowHeight/2+5,String(i+1),'middle');
+    });
+    const key=el('div','chart-key');
+    stages.forEach((p,i)=>key.append(el('span','',`${i+1}. ${p.label}: ${p.value} ${chart.unit}`)));
+    area.append(graph,key,el('div','chart-note','各阶段展示给定值；不自动推断转化率或同一批次。'));
+  }
+  function drawBoxplot(area, chart, detail) {
+    const boxes=chart.boxes,w=600,left=140,right=28,rowHeight=46,h=boxes.length*rowHeight+52;
+    const min=Math.min(...boxes.map(p=>p.min)),max=Math.max(...boxes.map(p=>p.max));
+    const x=v=>max===min?(left+w-right)/2:left+(v-min)/(max-min)*(w-left-right),graph=graphFor(chart,w,h);
+    boxes.forEach((p,i)=>{
+      const y=25+i*rowHeight, group=svg('g');
+      group.append(svg('line',{x1:x(p.min),y1:y,x2:x(p.max),y2:y,stroke:'var(--sub)','stroke-width':2}));
+      for(const v of [p.min,p.max]) group.append(svg('line',{x1:x(v),y1:y-8,x2:x(v),y2:y+8,stroke:'var(--sub)','stroke-width':2}));
+      group.append(svg('rect',{x:x(p.q1),y:y-10,width:Math.max(1,x(p.q3)-x(p.q1)),height:20,fill:colors[0],'fill-opacity':'.55',stroke:colors[0]}));
+      group.append(svg('line',{x1:x(p.median),y1:y-10,x2:x(p.median),y2:y+10,stroke:'var(--ink)','stroke-width':2}));
+      graph.append(mark(group,'boxplot',`${p.label}: 最小值 ${p.min}, Q1 ${p.q1}, 中位数 ${p.median}, Q3 ${p.q3}, 最大值 ${p.max} ${chart.unit}`,detail));
+      svgText(graph,left-8,y+4,String(i+1),'end');
+    });
+    svgText(graph,left,h-12,String(min));svgText(graph,w-right,h-12,String(max),'end');
+    const wrap=el('div','svg-scroll');wrap.append(graph);area.append(wrap);
+    const key=el('div','chart-key');
+    boxes.forEach((p,i)=>key.append(el('span','',`${i+1}. ${p.label}`)));
+    area.append(key,el('div','chart-note',`刻度范围：${min} – ${max} ${chart.unit}`));
+  }
+  function drawSankey(area, chart, detail) {
+    const nodes=chart.nodes.map((n,i)=>({...n,index:i,level:0,incoming:0,outgoing:0,inScale:0,outScale:0})), byId=new Map(nodes.map(n=>[n.id,n]));
+    const maxFlow=Math.max(...chart.links.map(link=>link.value));
+    for(const link of chart.links){
+      const a=byId.get(link.source),b=byId.get(link.target),normalized=link.value/maxFlow;
+      a.outgoing+=link.value;b.incoming+=link.value;a.outScale+=normalized;b.inScale+=normalized;
+    }
+    // Longest-path layers, preserving explicit edges. A cycle is not drawable.
+    for(let i=0;i<nodes.length;i++){
+      let changed=false;
+      for(const link of chart.links){const a=byId.get(link.source),b=byId.get(link.target);if(b.level<=a.level){b.level=a.level+1;changed=true;}}
+      if(!changed)break;
+      if(i===nodes.length-1){area.append(el('div','empty','流向包含循环，无法绘制。'));return;}
+    }
+    const levels=Array.from({length:Math.max(...nodes.map(n=>n.level))+1},(_,i)=>nodes.filter(n=>n.level===i));
+    const maxCount=Math.max(...levels.map(a=>a.length)),h=Math.max(260,maxCount*26+70),w=Math.max(640,levels.length*170),gap=14,top=24,nodeW=12;
+    const size=n=>Math.max(n.inScale,n.outScale);
+    const scale=Math.min(...levels.filter(col=>col.some(size)).map(col=>(h-top-30-(col.length-1)*gap)/col.reduce((a,n)=>a+size(n),0)));
+    levels.forEach((col,l)=>{
+      let y=top;
+      col.forEach(n=>{n.x=45+(w-90-nodeW)*(levels.length===1?0:l/(levels.length-1));n.y=y;n.height=Math.max(1,size(n)*scale);n.inOffset=0;n.outOffset=0;y+=n.height+gap;});
+    });
+    const graph=graphFor(chart,w,h);
+    let tinyFlow=false;
+    for(const link of chart.links){
+      const a=byId.get(link.source),b=byId.get(link.target),thickness=(link.value/maxFlow)*scale;
+      const y1=a.y+a.outOffset+thickness/2,y2=b.y+b.inOffset+thickness/2;
+      a.outOffset+=thickness;b.inOffset+=thickness;
+      if(thickness<.4)tinyFlow=true;
+      const mid=(a.x+nodeW+b.x)/2,path=svg('path',{d:`M ${a.x+nodeW} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${b.x} ${y2}`,fill:'none',stroke:colors[a.index%colors.length],'stroke-width':Math.max(.4,thickness),'stroke-opacity':'.58'});
+      graph.append(mark(path,'sankey',`${a.label} → ${b.label}: ${link.value} ${chart.unit}`,detail));
+    }
+    for(const n of nodes){
+      const rect=svg('rect',{x:n.x,y:n.y,width:nodeW,height:n.height,fill:colors[n.index%colors.length]});
+      graph.append(mark(rect,'sankey',`${n.label}: 流入约 ${numberText(n.incoming)} · 流出约 ${numberText(n.outgoing)} ${chart.unit}`,detail));
+      svgText(graph,n.x+nodeW+4,n.y+12,String(n.index+1));
+    }
+    const wrap=el('div','svg-scroll');
+    const wide=nodes.length>12 || levels.length>4;
+    if(wide) {
+      graph.classList.add('wide-chart');
+      wrap.tabIndex=0;
+      wrap.setAttribute('role','region');
+      wrap.setAttribute('aria-label',chart.title+'，图形可左右滚动');
+    }
+    wrap.append(graph);area.append(wrap);
+    const key=el('div','chart-key');
+    nodes.forEach(n=>key.append(el('span','',`${n.index+1}. ${n.label}`)));
+    const imbalance=nodes.filter(n=>n.incoming>0 && n.outgoing>0 && Math.abs(n.incoming-n.outgoing)>Number.EPSILON*Math.max(Math.abs(n.incoming),Math.abs(n.outgoing),Number.MIN_VALUE)*8);
+    const imbalanceNote=imbalance.length
+      ? '；不平衡：' + imbalance.map(n=>`${n.label} 流入约 ${numberText(n.incoming)}、流出约 ${numberText(n.outgoing)}`).join('；')
+      : '';
+    area.append(key,el('div','chart-note','流向和数量由来源给定；节点流入与流出不默认相等' + imbalanceNote + '。' + (tinyFlow?'极小流量使用最小线宽，具体数值请查看明细。':'') + (wide?'图形可左右滚动。':'')));
   }
   function eventsNode(events) {
     const box = el('section', 'events');
@@ -493,7 +876,7 @@
     params: {
       appInfo: {
         name: 'DerbySoft Log Analysis',
-        version: '0.7.0'
+        version: '0.8.0'
       },
       appCapabilities: {},
       protocolVersion: '2026-01-26'

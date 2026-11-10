@@ -6,7 +6,7 @@
 
 需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
 
-推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.7.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.8.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
 
 CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
 
@@ -52,11 +52,13 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 
 ## 可视化分析
 
-调查 skill 会根据问题选择展示方式：失败趋势用折线图，process 或服务对比用条形图，请求经过用事件时间线；少量精确值仍可用文字或表格。图表可查看精确数据和来源，支持宿主浅深色与窄屏。无需每次都补一句“画图”。
+调查 skill 会根据问题选择展示方式，并在首轮覆盖请求的业务和拆分维度。整体占比可用饼图或环形图，各组成功率比较可用 100% 堆叠条形图，失败趋势用折线图，请求经过用事件时间线；少量精确值仍可用文字或表格。无需每次都补一句“画图”。
 
-实现遵循 OpenAI 推荐的 Data Tool／Render Tool 分离：现有 OpenSearch、StreamLog、Loki 工具返回 `structuredContent`，模型先核实、筛选和分析，再调用 `render_log_analysis`。只有渲染工具通过 `_meta.ui.resourceUri` 关联分析界面。它不重新查询日志、不读取凭证、不保存报告，也不替模型验证业务结论；每项指标、图表和事件都保留来源、环境、范围及完整性说明。
+查询与展示分离：OpenSearch、StreamLog、Loki 工具返回 `structuredContent`，模型先核实、筛选和分析，再选择展示方式。常规统计优先使用当前宿主可用且适合任务的原生图表；在 Codex 中遵循可用的可视化 skill，包括其必要的会话展示文件。这些文件只承载已查询数据，不用于绕过 MCP 查询日志。
 
-展示依赖实际宿主能力：支持 MCP Apps 的宿主可嵌入此界面；原生图表工具可用时，skill 也可以按适用性选择。不能把所有 Codex 客户端都视为具备同一种 Intelligent UI 接口。不支持 UI 时返回简洁结论和必要表格，不要求临时脚本、HTML 文件或另装可视化插件。
+插件的 `render_log_analysis` 是 MCP Apps 备用视图，支持饼图、环形图、折线、面积、普通/堆叠/100% 堆叠条形、直方、热力、散点、漏斗、箱线和桑基图，以及指标和事件时间线。图表提供精确数据、来源、浅深色和窄屏布局，不依赖外部图表 CDN。它不重新查询日志、不读取凭证、不保存报告，也不替模型验证业务结论。没有合适的原生能力或需要插件专用视图时使用；两者均不可用时返回简洁结论和必要表格。
+
+饼图使用互斥组成和已知分母；直方图传入已计算的区间与计数；箱线图传入有来源的五数摘要；漏斗和桑基图需要可比较的阶段或流量定义。未知值不能变成零，采样不能变成总体，图形不能补造缺失的业务证据。变更展示方式复用既有查询结果，只有用户要求刷新或数据不足时才重新查询。
 
 例如：“比较 UAT 最近一小时各 process 的失败数量，并查看变化趋势”，或“把这次请求在 PerfLog、StreamLog、console 中的证据整理成时间线”。计数应来自对应查询总体或服务端聚合，样本不会被当作总量；缺失值、截断和关联未验证仍会明确显示。
 
@@ -78,6 +80,10 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 | Settings | `open_log_settings` | 打开使用同一配置的 MCP App 备用界面 |
 
 OpenSearch 路由器在隔离的子进程中调用官方 MCP；普通查询、聚合和关联直接使用 MCP 工具，不需要临时客户端脚本或查询 JSON。`correlate_perflog` 接受从搜索结果 `result.hits.hits` 得到的记录；StreamLog client 必须来自用户明确提供的信息或实际记录，不能把 supplier 当作 client。`echo_token_channel` 和 `echo_token_derby` 不自动替代 `echo_token`。
+
+已有默认索引和已验证字段时直接查询，`ListIndexTool` / `IndexMappingTool` 不是前置步骤。对明确的元数据权限 403，插件按环境身份、端点、账号、凭证版本、具体索引范围和操作记录 24 小时，后续调用可直接返回 `status=permission_denied`、`is_error=true`、`result=null` 和 `cached` 标记，避免重复请求。它不表示搜索被拒绝或索引不存在；环境列表可返回默认索引的本地拒绝提示，不会主动探测网络。
+
+修改地址、账号、凭证或重建环境后旧记录不再适用；环境变量或无法识别凭证版本的旧配置不使用持久权限缓存。管理员已调整权限时，可对所需元数据工具设置 `force_refresh=true` 重新检测。没有提示仅表示未知，不代表有权限。必要字段仍不明确时，先核对业务知识、项目代码和有限样本，再请使用者提供缺失的字段定义；样本字段存在不证明可以精确匹配或聚合。
 
 StreamLog 时间需要明确时区，页大小为 10–100；关联一次最多处理 50 条输入、10 个不同 client/token，按需最多获取 5 条详情。核对返回的 token、时间和完整性。Loki 每次最多查 31 天和 5,000 条，保留纳秒时间戳；内容和级别在服务端过滤后应用条数限制。达到上限、权限不足、缺失日志或单条 console 异常都不能证明完整业务结果。
 

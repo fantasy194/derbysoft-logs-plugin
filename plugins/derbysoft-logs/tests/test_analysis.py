@@ -127,3 +127,85 @@ def test_invalid_input_does_not_echo_values(report):
     with pytest.raises(ToolError) as error:
         render_log_analysis(report)
     assert "never-print-this-123" not in str(error.value)
+
+
+def chart(kind, **data):
+    return {"id": "c", "title": "Test", "kind": kind, "unit": "events", "source_ids": ["perf"], **data}
+
+
+@pytest.mark.parametrize("item", [
+    chart("area", x_label="Time", series=[{"name": "events", "points": [
+        {"x": "2026-11-10T00:00:00Z", "y": 2}, {"x": "2026-11-10T01:00:00Z", "y": None}]}]),
+    chart("stacked_bar", x_label="Service", mode="percent", series=[
+        {"name": "OK", "points": [{"x": "one", "y": 2}]},
+        {"name": "Failed", "points": [{"x": "one", "y": 3}]}]),
+    chart("pie", slices=[{"label": "OK", "value": 5}, {"label": "Failed", "value": 0}]),
+    chart("donut", slices=[{"label": "OK", "value": 5}]),
+    chart("histogram", x_label="Duration", bins=[{"lower": 0, "upper": 2, "count": 3}, {"lower": 2, "upper": 5, "count": 2}]),
+    chart("heatmap", x_label="Hour", y_label="Service", cells=[{"x": "1", "y": "A", "value": None}]),
+    chart("scatter", x_label="Retries", y_label="Duration", points=[{"x": 1, "y": 2, "label": "sample"}]),
+    chart("funnel", stages=[{"label": "sent", "value": 5}, {"label": "accepted", "value": 3}]),
+    chart("boxplot", boxes=[{"label": "A", "min": 1, "q1": 2, "median": 3, "q3": 4, "max": 5}]),
+    chart("sankey", nodes=[{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+          links=[{"source": "a", "target": "b", "value": 5}]),
+])
+def test_each_chart_family_accepts_and_retains_bounded_attributed_data(report, item):
+    report["charts"] = [item]
+    output = render_log_analysis(report).structured_content["report"]["charts"][0]
+    assert output["kind"] == item["kind"]
+    assert output["source_ids"] == ["perf"]
+    if item["kind"] == "heatmap":
+        assert output["cells"][0]["value"] is None
+    if item["kind"] == "area":
+        assert output["series"][0]["points"][1]["y"] is None
+
+
+@pytest.mark.parametrize("item", [
+    chart("area", x_label="Time", series=[{"name": "x", "points": [{"x": "yesterday", "y": 1}]}]),
+    chart("stacked_bar", x_label="X", series=[{"name": "a", "points": [{"x": "x", "y": None}]}]),
+    chart("stacked_bar", x_label="X", mode="percent", series=[{"name": "a", "points": [{"x": "x", "y": 0}]}]),
+    chart("stacked_bar", x_label="X", series=[{"name": "a", "points": [{"x": "x", "y": 1}]},
+                                              {"name": "b", "points": [{"x": "other", "y": 1}]}]),
+    chart("pie", slices=[{"label": "none", "value": 0}]),
+    chart("donut", slices=[{"label": "a", "value": -1}]),
+    chart("histogram", x_label="X", bins=[{"lower": 0, "upper": 2, "count": 1}, {"lower": 1, "upper": 3, "count": 2}]),
+    chart("histogram", x_label="X", bins=[{"lower": 0, "upper": 1, "count": 1.5}]),
+    chart("histogram", x_label="X", bins=[{"lower": 0, "upper": 5e-324, "count": 1}]),
+    chart("heatmap", x_label="X", y_label="Y", cells=[{"x": "x", "y": "y", "value": 1}, {"x": "x", "y": "y", "value": 2}]),
+    chart("scatter", x_label="X", y_label="Y", points=[{"x": 1, "y": float("nan")}]),
+    chart("funnel", stages=[{"label": "a", "value": -1}]),
+    chart("boxplot", boxes=[{"label": "A", "min": 1, "q1": 4, "median": 3, "q3": 5, "max": 6}]),
+    chart("sankey", nodes=[{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+          links=[{"source": "a", "target": "b", "value": 1}, {"source": "b", "target": "a", "value": 1}]),
+    chart("sankey", nodes=[{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+          links=[{"source": "a", "target": "unknown", "value": 1}]),
+    chart("sankey", nodes=[{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+          links=[{"source": "a", "target": "b", "value": 0}]),
+])
+def test_chart_family_rejects_misleading_or_invalid_data(report, item):
+    report["charts"] = [item]
+    with pytest.raises(ToolError, match="Invalid analysis report"):
+        render_log_analysis(report)
+
+
+def test_expanded_mcp_report_schema_has_no_dangling_definitions():
+    from derbysoft_logs.analysis_server import REPORT_SCHEMA
+
+    def references(value):
+        if isinstance(value, dict):
+            assert "$ref" not in value and "discriminator" not in value
+            for child in value.values():
+                references(child)
+        elif isinstance(value, list):
+            for child in value:
+                references(child)
+
+    references(REPORT_SCHEMA)
+
+
+def test_sparse_heatmap_axis_explosion_is_rejected(report):
+    report["charts"] = [chart("heatmap", x_label="x", y_label="y", cells=[
+        {"x": str(i), "y": str(i), "value": 1} for i in range(41)
+    ])]
+    with pytest.raises(ToolError, match="Invalid analysis report"):
+        render_log_analysis(report)

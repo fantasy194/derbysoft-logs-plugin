@@ -2,6 +2,17 @@
 
 最新验证日期：2026-11-10（Asia/Hong_Kong）。测试账号/授权值和真实报文均不保存在发布包。
 
+## 0.8.0 查询直达与完整备用图表（2026-11-10）
+
+- 已知索引与已验证字段直接查询，不将 ListIndexTool / IndexMappingTool 作为前置步骤。明确的元数据权限 403 按环境、连接、版本化凭证、索引范围和操作本地缓存 24 小时；未版本化凭证不持久缓存，地址/账号/凭证变化不复用旧记录，主动 force_refresh 成功清除拒绝。环境列表只读取本地提示，不做网络或凭证访问。
+- 使用现有 Prod 配置做限定的只读验证：首次 mapping 返回结构化 permission_denied，第二次 cached=true，耗时分别约 10.11 秒和不足 0.01 秒；随后默认索引的 size=0、match_none 搜索返回 56/56 成功分片、零失败、未超时、零业务文档。首次验证发现旧 profile 缺 instance_id 导致缓存失效，已改为兼容已有版本化 secret_id；未改写 profile 或凭证。上游官方 MCP 的启动版本探测仍可能在 stderr 记录根路径 403，不等同于业务搜索失败。
+- 插件备用渲染支持 line、bar、area、stacked_bar（absolute/percent）、pie、donut、histogram、heatmap、scatter、funnel、boxplot、sankey，以及指标与事件时间线。严格校验数值、引用、区间、五数摘要、网格规模及有向无环流；不等宽直方图按密度绘制，桑基图明确流量差异，保留未知值与原始精度。
+- Windows 全量 Python 测试 346 项及 2 个子测试通过，1 项真实符号链接测试因权限跳过；Ruff 通过。真实 MCP stdio 往返验证全部图表家庭的 input/output schema、来源和数据保留，并检查无配置启动和错误输入拒绝。权限测试覆盖作用域、凭证轮换、过期、强制复查、会话间复用、并发旧结果与普通搜索不受影响。
+- Chromium 合成 MCP 宿主测试通过全部图表、精确数据表、来源、键盘与重叠散点、提前结果、错误状态、防注入、深浅色与窄屏。实图检查修复 375px 箱线图和桑基图右侧裁切；极小数桑基图不产生 NaN/Infinity。设置页面回归通过。新增独立 CI browser job，使上述界面测试随每次 push 执行。
+- 调查 skill 优先使用适合任务的宿主原生图表，允许其必要展示文件，继续禁止绕过 MCP 的查询脚本；首轮覆盖所需业务与维度，换图复用既有数据。独立前向检查覆盖已知字段直查、受限 mapping 后缺字段询问、重叠标签/样本不可当整体，以及已有结果直接原生展示；skill 格式与参考链接检查通过。
+- 分享 ZIP 的 79 个 allowlist 文件逐字节一致；在含空格的全新目录离线安装后，包内真实 stdio、权限缓存和包装检查共 22 项通过。测试只使用隔离合成数据与临时配置。
+- 以上浏览器证据来自隔离合成宿主；不代表当前 Codex 已逐一展示所有备用图表，也不代表已验证真实业务指标口径。真实公司验证仅为上述无业务文档的权限与搜索检查。
+
 ## 0.7.0 数据与可视化分离（2026-11-10）
 
 - 依据 OpenAI 的 [Data Tool / Render Tool 分离说明](https://developers.openai.com/plugins/build/chatgpt-ui#separate-data-processing-from-ui-rendering)、[UI 指南](https://developers.openai.com/plugins/concepts/ui-guidelines) 和 MCP Apps 规范增加分析视图。现有日志查询工具保持 `structuredContent` 且不附分析资源；仅 `render_log_analysis` 关联 `ui://derbysoft-logs/analysis-v1.html`。

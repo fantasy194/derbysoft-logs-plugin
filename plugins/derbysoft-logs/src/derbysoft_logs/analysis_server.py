@@ -28,7 +28,10 @@ def _inline_schema(schema: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             if "$ref" in value:
                 return expand(definitions[value["$ref"].removeprefix("#/$defs/")])
-            return {key: expand(item) for key, item in value.items() if key != "$defs"}
+            # Pydantic's discriminator mapping refers to $defs. The model's
+            # distinct Literal kind fields already make its expanded oneOf
+            # unambiguous, so omit that OpenAPI-only mapping after inlining.
+            return {key: expand(item) for key, item in value.items() if key not in {"$defs", "discriminator"}}
         if isinstance(value, list):
             return [expand(item) for item in value]
         return value
@@ -44,8 +47,12 @@ ReportInput = Annotated[Any, WithJsonSchema(REPORT_SCHEMA)]
 def render_log_analysis(report: ReportInput) -> Annotated[CallToolResult, AnalysisOutput]:
     """Display a compact log analysis built from previously retrieved results.
 
-    Choose a visualization when it helps: time series for a measured trend,
-    bars for comparable categories, or events for a request chronology.
+    Choose a visualization that fits the question: line/area for measured
+    time series, bar/stacked_bar for category comparisons, pie/donut for parts
+    of one known whole, histogram for explicit bins, heatmap for a matrix,
+    scatter for pairs, funnel for measured stages, boxplot for supplied five
+    number summaries, sankey for a supplied directed acyclic flow, and events
+    for a request chronology. The JSON schema specifies each shape.
     This tool does not query or independently verify its sources. Pass only
     relevant, sanitized data from successful structured data-tool results;
     do not pass raw records, payloads, credentials, or arbitrary HTML/code.
@@ -53,8 +60,11 @@ def render_log_analysis(report: ReportInput) -> Annotated[CallToolResult, Analys
     cite source_ids on each metric/chart/event, and disclose partial results.
     Values are observations or derived results, not evidence of complete data
     or final business outcome. A missing value must remain null, not zero.
-    For line charts, timestamps are timezone-qualified ISO strings; bars use
-    category labels. Different environments remain separately attributed.
+    For line/area charts, timestamps are timezone-qualified ISO strings.
+    Stacks and pie/donut require complete nonnegative additive parts; do not
+    infer missing parts. Funnel stages are observations, not proven cohort
+    conversion. Sankey links do not establish conservation or causality.
+    Different environments remain separately attributed.
     Prefer a concise ordinary answer if a chart adds no value or the host
     cannot show MCP Apps; the data tools remain usable on their own.
     """

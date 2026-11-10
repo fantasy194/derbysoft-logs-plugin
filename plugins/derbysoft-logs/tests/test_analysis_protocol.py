@@ -78,6 +78,32 @@ async def test_existing_data_tools_remain_structured_without_ui_metadata():
 
 
 @pytest.mark.asyncio
+async def test_chart_families_roundtrip_through_real_stdio_without_configuration(tmp_path):
+    reports = json.loads((Path(__file__).parent / "fixtures" / "analysis-chart-families.json").read_text(encoding="utf-8"))["reports"]
+    observed = set()
+    async with asyncio.timeout(40), Client(isolated_stdio(tmp_path / "chart home"), read_timeout_seconds=15) as session:
+        tool, = (await session.list_tools()).tools
+        validator = Draft202012Validator(tool.input_schema)
+        for report in reports:
+            validator.validate({"report": report})
+            result = await session.call_tool("render_log_analysis", {"report": report})
+            assert not result.is_error, result.content
+            actual = result.structured_content["report"]
+            assert actual["sources"] == report["sources"]
+            assert len(actual["charts"]) == len(report["charts"])
+            for supplied, rendered in zip(report["charts"], actual["charts"], strict=True):
+                observed.add(rendered["kind"])
+                for key, value in supplied.items():
+                    assert rendered[key] == value
+        assert observed == {"area", "stacked_bar", "pie", "donut", "histogram", "heatmap", "scatter", "funnel", "boxplot", "sankey"}
+        invalid = deepcopy(reports[0])
+        invalid["charts"][3]["slices"][0]["value"] = -1
+        rejected = await session.call_tool("render_log_analysis", {"report": invalid})
+        assert rejected.is_error
+    assert not (tmp_path / "chart home").exists()
+
+
+@pytest.mark.asyncio
 async def test_data_then_render_preserves_aggregation_environment_and_partial_coverage(monkeypatch):
     """A real data tool wraps a mocked upstream; the real render tool consumes it."""
     upstream = {"timed_out": True, "_shards": {"failed": 1}, "aggregations": {"per_minute": {"buckets": [
@@ -85,7 +111,7 @@ async def test_data_then_render_preserves_aggregation_environment_and_partial_co
         {"key_as_string": "2026-11-10T00:01:00Z", "doc_count": 7},
     ]}}}
 
-    async def fake_calls(calls, environment):
+    async def fake_calls(calls, environment, *, force_refresh=False):
         return {"environment": environment, "results": [{"name": call["name"], "index": "uat-log-*",
                 "index_source": "configured", "is_error": False, "result": deepcopy(upstream)} for call in calls]}
 
@@ -119,7 +145,7 @@ async def test_data_then_render_preserves_aggregation_environment_and_partial_co
 
 @pytest.mark.asyncio
 async def test_loki_stream_and_batch_data_tools_return_structured_data(monkeypatch):
-    async def fake_calls(calls, environment):
+    async def fake_calls(calls, environment, *, force_refresh=False):
         return {"environment": environment, "results": [{"name": call["name"], "index": "logs-*", "index_source": "configured", "is_error": False,
                 "result": {"hits": {"hits": []}}} for call in calls]}
     monkeypatch.setattr(opensearch_server, "_run_calls", fake_calls)
