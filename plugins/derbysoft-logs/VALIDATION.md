@@ -2,6 +2,17 @@
 
 最新验证日期：2026-11-10（Asia/Hong_Kong）。测试账号/授权值和真实报文均不保存在发布包。
 
+## 0.7.0 数据与可视化分离（2026-11-10）
+
+- 依据 OpenAI 的 [Data Tool / Render Tool 分离说明](https://developers.openai.com/plugins/build/chatgpt-ui#separate-data-processing-from-ui-rendering)、[UI 指南](https://developers.openai.com/plugins/concepts/ui-guidelines) 和 MCP Apps 规范增加分析视图。现有日志查询工具保持 `structuredContent` 且不附分析资源；仅 `render_log_analysis` 关联 `ui://derbysoft-logs/analysis-v1.html`。
+- Windows 全量 Python 测试 303 项及 2 个子测试通过，1 项因真实符号链接创建权限而跳过；该边界另有模拟测试。新增 41 项覆盖严格报告数据、来源引用、类型/范围、缺失值、纳秒时间、凭证拒绝与双协议真实 stdio。渲染器提供精确 input/output schema，失败不回显无效输入内容；启动和渲染不需要日志配置，不调用后端或写入用户目录。
+- 合成数据链路实际调用 OpenSearch 数据工具后调用 Render Tool，验证环境、索引、聚合数值和 partial 状态保留；逐一检查 OpenSearch、StreamLog、Loki 常用查询工具仍输出结构化数据且无分析 UI metadata。上游网络由测试替身提供，不代表真实公司权限或业务结果验证。
+- 独立 skill forward-test 使用部分聚合、未返回时间桶及总量查询 403：最终用两个条形图展示 process 和已观察时间桶，不补造未知桶宽或中间时间、不计算失败率、不推断实际升高起点。对于“只告诉数值，不要图表”未调用渲染工具。根据首次试用发现，补充了未知桶宽的展示选择指引；复验通过实际 stdio 生成报告。
+- 真实 Chromium 的隔离 MCP 宿主测试通过，检查 375px/410px/900px、浅深色、图表/数据表切换、系列开关、点选和键盘 Enter、逐项来源入口、来源展开、时间轴纳秒排序与同时间事件保留、缺失值断线、负值零基线、提前到达结果、防注入、错误/空状态及 iframe 高度收缩。人工检查窄屏完整截图及展开来源/数据表截图；HTML 自包含，无 CDN、外部数据请求或新增浏览器运行时依赖。
+- 分享包在含空格的全新路径解压后 `uv sync --frozen --offline` 成功；按包内 manifest 启动 analysis stdio，获取 HTML 资源、发现 schema、渲染合成报告均通过，隔离用户配置目录未创建。最终包同步后续界面和验证记录。
+- 设置页面仅同步版本号，原有 Chromium 设置回归通过；修正了测试中点击刷新后读取旧选项的竞态，等待目标环境选项实际移除后再断言，未修改设置交互逻辑。
+- 本轮没有查询真实公司日志、持久化分析报告、改写用户已安装缓存或停止当前会话的插件进程。协议测试和合成宿主浏览器测试不等同于当前 Codex 已安装插件显示了新视图；各宿主的原生 Intelligent UI 与 MCP Apps 可用性应分别验证。
+
 ## 0.6.0 项目业务语义积累（2026-11-10）
 
 - Windows 全量自动化测试 262 项及 2 个子测试通过，1 项因本机无真实符号链接创建权限而跳过；模拟符号链接拒绝测试通过。Ruff 与两个 skill 校验通过。

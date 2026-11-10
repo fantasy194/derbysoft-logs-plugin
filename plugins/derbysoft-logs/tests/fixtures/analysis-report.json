@@ -1,0 +1,56 @@
+{
+  "title": "预订请求日志分析",
+  "summary": "候选错误集中在第二个时间窗口；事件不单独证明最终订单状态。",
+  "sources": [
+    {
+      "id": "perf",
+      "tool": "SearchIndexTool",
+      "environment": "uat",
+      "scope": "derbysoft-exchange-* · booking-service",
+      "start": "2026-11-10T08:00:00+08:00",
+      "end": "2026-11-10T08:03:00+08:00",
+      "coverage": "complete",
+      "note": "按分钟聚合；查询实际范围为指定环境与索引。"
+    },
+    {
+      "id": "console",
+      "tool": "search_console_logs",
+      "environment": "uat",
+      "scope": "booking-service",
+      "start": "2026-11-10T08:00:00+08:00",
+      "end": "2026-11-10T08:03:00+08:00",
+      "coverage": "partial",
+      "note": "只返回查询上限内的 console 记录，可能还有更多。"
+    }
+  ],
+  "metrics": [
+    {"label": "请求数", "value": 42, "unit": "次", "source_ids": ["perf"]},
+    {"label": "失败率", "value": 7.14, "unit": "%", "source_ids": ["perf"]}
+  ],
+  "charts": [
+    {
+      "id": "trend", "title": "每分钟请求", "kind": "line", "unit": "次", "x_label": "时间",
+      "source_ids": ["perf"],
+      "series": [
+        {"name": "请求", "points": [{"x": "2026-11-10T00:00:00Z", "y": 18}, {"x": "2026-11-10T00:01:00Z", "y": 24}]},
+        {"name": "异常", "points": [{"x": "2026-11-10T00:00:00Z", "y": 0}, {"x": "2026-11-10T00:01:00Z", "y": 3}]}
+      ]
+    },
+    {
+      "id": "process", "title": "按 process 分布", "kind": "bar", "unit": "次", "x_label": "process",
+      "source_ids": ["perf"],
+      "series": [{"name": "请求", "points": [{"x": "Book", "y": 30}, {"x": "Cancel", "y": 12}]}]
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-11-10T00:01:12.123456789Z", "service": "booking-service", "process": "Book",
+      "label": "收到预订请求", "status": "info", "source_ids": ["perf"], "detail": "事件为请求步骤。"
+    },
+    {
+      "timestamp": "2026-11-10T00:01:12.123456789Z", "service": "booking-service", "process": "Book",
+      "label": "上游返回异常", "status": "error", "source_ids": ["console"], "detail": "日志提示网络异常，最终结果待确认。"
+    }
+  ],
+  "notes": ["console 查询存在截断；关联仍需核对。"]
+}

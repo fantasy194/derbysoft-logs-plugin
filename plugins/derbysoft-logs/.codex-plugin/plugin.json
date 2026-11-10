@@ -1,7 +1,7 @@
 {
   "name": "derbysoft-logs",
-  "version": "0.6.0",
-  "description": "DerbySoft business log investigation: PerfLog, StreamLog, Loki, request correlation and evidence-backed, project-scoped process knowledge.",
+  "version": "0.7.0",
+  "description": "DerbySoft PerfLog, StreamLog and Loki investigation with interactive analysis views and evidence-backed project process knowledge.",
   "author": {"name": "DerbySoft"},
   "license": "Proprietary",
   "skills": "./skills/",

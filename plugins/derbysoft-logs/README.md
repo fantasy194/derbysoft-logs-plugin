@@ -6,7 +6,7 @@
 
 需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
 
-推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.6.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.7.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
 
 CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
 
@@ -50,6 +50,18 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 - “记住这个服务中该 process 的业务含义，依据当前代码。”
 - “上次记的 processType 定义需要修正，查看之前的版本。”
 
+## 可视化分析
+
+调查 skill 会根据问题选择展示方式：失败趋势用折线图，process 或服务对比用条形图，请求经过用事件时间线；少量精确值仍可用文字或表格。图表可查看精确数据和来源，支持宿主浅深色与窄屏。无需每次都补一句“画图”。
+
+实现遵循 OpenAI 推荐的 Data Tool／Render Tool 分离：现有 OpenSearch、StreamLog、Loki 工具返回 `structuredContent`，模型先核实、筛选和分析，再调用 `render_log_analysis`。只有渲染工具通过 `_meta.ui.resourceUri` 关联分析界面。它不重新查询日志、不读取凭证、不保存报告，也不替模型验证业务结论；每项指标、图表和事件都保留来源、环境、范围及完整性说明。
+
+展示依赖实际宿主能力：支持 MCP Apps 的宿主可嵌入此界面；原生图表工具可用时，skill 也可以按适用性选择。不能把所有 Codex 客户端都视为具备同一种 Intelligent UI 接口。不支持 UI 时返回简洁结论和必要表格，不要求临时脚本、HTML 文件或另装可视化插件。
+
+例如：“比较 UAT 最近一小时各 process 的失败数量，并查看变化趋势”，或“把这次请求在 PerfLog、StreamLog、console 中的证据整理成时间线”。计数应来自对应查询总体或服务端聚合，样本不会被当作总量；缺失值、截断和关联未验证仍会明确显示。
+
+设计依据、数据整理和字段约定见 [可视化分析参考](skills/investigate-business-logs/references/visual-analysis.md)。
+
 ## 查询工具
 
 | MCP | 工具 | 用途 |
@@ -59,6 +71,7 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 | OpenSearch | `batch_search` | 同一环境内执行最多 8 个具名查询，逐项返回结果或错误 |
 | StreamLog | `search_streamlog`, `get_streamlog_detail`, `correlate_perflog` | 按 client/token 查询索引、获取报文并联查 PerfLog |
 | Loki | `list_loki_labels`, `search_console_logs`, `query_loki` | 发现标签、按应用和条件查 console log，或执行 LogQL |
+| Analysis | `render_log_analysis` | 将已取得并核实的数据呈现为指标、交互图表和事件时间线 |
 | Semantics | `search_business_semantics`, `get_business_semantics` | 按业务与字段上下文检索本地语义，查看证据和内容 |
 | Semantics | `save_business_semantics`, `list_business_semantics_history` | 在本机记录或修订语义，查看版本历史 |
 | Semantics | `rebuild_business_semantics_overview` | 从已保存修订重新生成可读 Markdown 总览 |

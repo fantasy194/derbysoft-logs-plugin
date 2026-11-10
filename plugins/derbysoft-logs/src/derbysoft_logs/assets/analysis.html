@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>日志分析</title>
+  <style>
+    :root{color-scheme:light;--bg:#fff;--card:#f8fafc;--ink:#202936;--sub:#647184;--border:#dfe6ee;--accent:#256bcd;--accent2:#12a88a;--warn:#9a5b05;--warn-bg:#fff5df;--track:#e6edf4;--font:var(--font-sans,system-ui,-apple-system,"Segoe UI",sans-serif)}
+    :root[data-theme=dark]{color-scheme:dark;--bg:#191b20;--card:#23262d;--ink:#f2f5f8;--sub:#a8b1bf;--border:#3b414d;--accent:#82b6ff;--accent2:#5ed5ba;--warn:#ffd186;--warn-bg:#493721;--track:#383e49}
+    [hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;background:var(--color-background-primary,var(--bg));color:var(--color-text-primary,var(--ink));font:14px/1.5 var(--font)}main{padding:20px;max-width:1200px;margin:auto;overflow-wrap:anywhere}h1,h2,h3,p{margin:0}h1{font-size:20px;line-height:1.3;letter-spacing:-.02em}h2{font-size:16px;line-height:1.3}h3{font-size:14px;line-height:1.4}.summary{font-size:14px;color:var(--color-text-secondary,var(--sub));margin-top:8px;white-space:pre-wrap}.eyebrow{font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.08em;margin-bottom:5px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.tag{border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:var(--sub);font-size:12px;max-width:100%}.coverage{border:1px solid transparent;border-radius:9px;background:var(--warn-bg);color:var(--warn);padding:10px 12px;margin-top:14px;white-space:pre-wrap}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:18px}.metric,.chart,.events,.sources{border:1px solid var(--border);border-radius:12px;background:var(--color-background-secondary,var(--card))}.metric{padding:12px 14px}.metric-label{font-size:12px;color:var(--sub)}.metric-value{font-size:22px;line-height:1.25;margin-top:4px;font-weight:650;font-variant-numeric:tabular-nums}.unit{font-size:12px;font-weight:500;color:var(--sub);margin-left:4px}.stack{display:grid;gap:12px;margin-top:16px}.chart,.events,.sources{padding:14px;min-width:0}.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.actions,.legend{display:flex;gap:5px;flex-wrap:wrap}.legend{margin:12px 0 5px}button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--border);border-radius:7px;background:transparent;padding:4px 8px}button:hover{border-color:var(--sub)}button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.selected{background:var(--track)}.series-button{font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--dot)}.series-button[aria-pressed=false]{opacity:.5}.chart-area{min-width:0;margin-top:10px}.chart-svg{width:100%;height:auto;display:block;overflow:visible}.gridline{stroke:var(--border);stroke-width:1}.axis-label{fill:var(--sub);font-size:18px;font-family:var(--font)}.line{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.point{stroke:var(--color-background-secondary,var(--card));stroke-width:2;cursor:pointer}.point:hover,.point:focus{stroke-width:3}.bars{display:grid;gap:10px;margin-top:12px}.bar-row{display:grid;grid-template-columns:minmax(62px,140px) 1fr minmax(42px,auto);gap:9px;align-items:center}.bar-label{font-size:12px;overflow-wrap:anywhere}.bar-track{height:13px;position:relative;background:var(--track);border-radius:4px}.bar-zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--sub);opacity:.7}.bar-fill{position:absolute;height:100%;border-radius:3px;background:var(--bar)}.bar-value{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}.empty{color:var(--sub);font-size:13px;padding:20px 0}.point-detail{font-size:12px;color:var(--sub);min-height:19px;margin-top:6px}.table-wrap{overflow:auto;margin-top:10px}table{border-collapse:collapse;min-width:100%;font-size:12px}th,td{text-align:left;border-bottom:1px solid var(--border);padding:7px 8px;vertical-align:top}th{color:var(--sub);font-weight:600}td{font-variant-numeric:tabular-nums}.event-list{margin:12px 0 0;padding:0;list-style:none}.event{position:relative;padding:0 0 14px 18px;border-left:1px solid var(--border);margin-left:5px}.event:last-child{padding-bottom:0;border-left-color:transparent}.event:before{content:"";position:absolute;width:9px;height:9px;left:-5px;top:5px;border-radius:50%;background:var(--sub)}.event[data-status=success]:before{background:var(--accent2)}.event[data-status=warning]:before{background:#d89322}.event[data-status=error]:before{background:#d85d64}.event-time{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.event-title{font-size:13px;font-weight:600}.event-context,.event-detail{font-size:12px;color:var(--sub);white-space:pre-wrap}.event-detail{padding-top:5px}.source-list{margin-top:10px;display:grid;gap:8px}.source{border-top:1px solid var(--border);padding-top:8px;font-size:12px}.source:first-child{border:0;padding-top:0}.source-meta{color:var(--sub);white-space:pre-wrap}.source-title{font-weight:600}.source-note{margin-top:4px}.source-ref{display:inline-block;color:var(--sub);font-size:11px;border:0;padding:0;margin-top:5px;text-decoration:underline;text-underline-offset:3px}.notes{color:var(--sub);font-size:12px;margin:12px 0 0;padding-left:18px}.status{padding:24px 2px;color:var(--sub)}.error{color:var(--warn)}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}summary{cursor:pointer}details>summary::marker{color:var(--sub)}
+    @media(max-width:440px){main{padding:14px}.chart,.events,.sources{padding:12px}.bar-row{grid-template-columns:minmax(54px,90px) 1fr minmax(36px,auto);gap:6px}.metric-value{font-size:20px}}
+  </style>
+</head>
+<body><main id="app" aria-live="polite"><div class="status" id="status">正在准备分析视图…</div></main>
+<script>
+(() => {
+  'use strict';
+
+  const root = document.getElementById('app'),
+    host = window.parent,
+    NS = 'http://www.w3.org/2000/svg';
+  const colors = ['var(--accent)', 'var(--accent2)', '#d39330', '#b980dd', '#e07880', '#66a0ad'];
+  let origin = null,
+    initialized = false,
+    early = null,
+    resizePending = false;
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+  function svg(tag, attrs = {}) {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+    return node;
+  }
+  function send(method, params) {
+    const msg = {
+      jsonrpc: '2.0',
+      method
+    };
+    if (params !== undefined) msg.params = params;
+    host.postMessage(msg, origin && origin !== 'null' ? origin : '*');
+  }
+  function theme(ctx) {
+    if (!ctx || typeof ctx !== 'object') return;
+    if (ctx.theme === 'light' || ctx.theme === 'dark') document.documentElement.dataset.theme = ctx.theme;
+    const vars = ctx.styles && ctx.styles.variables;
+    if (vars && typeof vars === 'object') for (const [key, value] of Object.entries(vars)) if (/^--(?:color|font|border)-[a-z0-9-]+$/.test(key) && typeof value === 'string' && value.length < 500) document.documentElement.style.setProperty(key, value);
+  }
+  function status(text, error = false) {
+    root.replaceChildren(el('div', 'status' + (error ? ' error' : ''), text));
+  }
+  function stamp(v) {
+    return typeof v === 'string' ? v : '';
+  }
+  // Keep nanoseconds and timezone intact. Convert to integer ns only for chart position.
+  function ns(s) {
+    const m = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?(Z|[+-]\d\d:\d\d)$/.exec(s || '');
+    if (!m) return null;
+    const ms = Date.parse(m[1] + m[3]);
+    return Number.isFinite(ms) ? BigInt(ms) * 1000000n + BigInt((m[2] || '').padEnd(9, '0')) : null;
+  }
+  function shortStamp(value, showFraction = false) {
+    const parts = /^(\d{4}-\d\d-\d\d)T(\d\d:\d\d):(\d\d)(\.\d{1,9})?(Z|[+-]\d\d:\d\d)$/.exec(value);
+    if (!parts) return value;
+    const seconds = parts[3] === '00' && !showFraction ? '' : ':' + parts[3];
+    return parts[1] + ' ' + parts[2] + seconds + (showFraction && parts[4] ? parts[4] : '') + parts[5];
+  }
+  function valid(payload) {
+    if (!payload || payload.schema_version !== 1 || !payload.report || typeof payload.report !== 'object') return false;
+    const r = payload.report;
+    if (typeof r.title !== 'string' || !r.title || typeof r.summary !== 'string' || !Array.isArray(r.sources) || !r.sources.length) return false;
+    if (!['metrics', 'charts', 'events', 'notes'].every(k => Array.isArray(r[k]))) return false;
+    const ids = new Set();
+    for (const s of r.sources) {
+      if (!s || typeof s.id !== 'string' || ids.has(s.id) || typeof s.tool !== 'string' || typeof s.environment !== 'string' || typeof s.scope !== 'string' || !['complete', 'partial', 'sample', 'unknown'].includes(s.coverage)) return false;
+      ids.add(s.id);
+    }
+    const refs = x => Array.isArray(x) && x.length > 0 && x.every(id => ids.has(id));
+    if (!r.metrics.every(m => m && typeof m.label === 'string' && typeof m.value === 'number' && Number.isFinite(m.value) && typeof m.unit === 'string' && refs(m.source_ids))) return false;
+    for (const c of r.charts) {
+      if (!c || typeof c.id !== 'string' || typeof c.title !== 'string' || !['bar', 'line'].includes(c.kind) || typeof c.unit !== 'string' || !Array.isArray(c.series) || !refs(c.source_ids)) return false;
+      for (const s of c.series) {
+        if (!s || typeof s.name !== 'string' || !Array.isArray(s.points)) return false;
+        for (const p of s.points) if (!p || typeof p.x !== 'string' || p.y !== null && (typeof p.y !== 'number' || !Number.isFinite(p.y)) || c.kind === 'line' && ns(p.x) === null) return false;
+      }
+    }
+    return r.events.every(e => e && ns(e.timestamp) !== null && typeof e.label === 'string' && typeof e.service === 'string' && typeof e.process === 'string' && typeof e.detail === 'string' && ['info', 'success', 'warning', 'error', 'unknown'].includes(e.status) && refs(e.source_ids)) && r.notes.every(x => typeof x === 'string');
+  }
+  function receive(params) {
+    if (!params || typeof params !== 'object') {
+      status('无法读取分析结果。', true);
+      return;
+    }
+    if (params.isError) {
+      status('分析视图未能生成，请查看工具返回的信息。', true);
+      return;
+    }
+    if (!valid(params.structuredContent)) {
+      status('分析结果格式不完整，无法显示图表。', true);
+      return;
+    }
+    render(params.structuredContent.report);
+  }
+  function sourceLabel(s) {
+    return [s.environment, s.scope].filter(Boolean).join(' · ');
+  }
+  function fmt(v) {
+    return v === null ? '缺失' : String(v);
+  }
+  function sourceRef(ids) {
+    const button = el('button', 'source-ref', '来源：' + ids.join('、'));
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      const sources = root.querySelector('.sources');
+      if (sources) {
+        sources.open = true;
+        const target = [...sources.querySelectorAll('.source')].find(node => ids.includes(node.dataset.sourceId));
+        (target || sources).scrollIntoView({
+          block: 'nearest'
+        });
+      }
+    });
+    return button;
+  }
+  function render(report) {
+    root.replaceChildren();
+    root.append(el('div', 'eyebrow', 'LOG ANALYSIS'), el('h1', '', report.title));
+    if (report.summary) root.append(el('p', 'summary', report.summary));
+    const tags = el('div', 'tags');
+    for (const label of [...new Set(report.sources.map(sourceLabel))]) tags.append(el('span', 'tag', label));
+    root.append(tags);
+    const warning = report.sources.filter(s => s.coverage !== 'complete');
+    if (warning.length) {
+      const kinds = {
+        partial: '不完整',
+        sample: '样本',
+        unknown: '覆盖范围未知'
+      };
+      root.append(el('div', 'coverage', '数据范围：' + warning.map(s => `${s.id} ${kinds[s.coverage]}`).join('；') + '。请结合来源查看。'));
+    }
+    if (report.metrics.length) {
+      const grid = el('section', 'metrics');
+      grid.setAttribute('aria-label', '关键指标');
+      for (const m of report.metrics) {
+        const card = el('div', 'metric'),
+          value = el('div', 'metric-value', fmt(m.value));
+        if (m.unit) value.append(el('span', 'unit', m.unit));
+        card.append(el('div', 'metric-label', m.label), value, sourceRef(m.source_ids));
+        grid.append(card);
+      }
+      root.append(grid);
+    }
+    const stack = el('div', 'stack');
+    for (const chart of report.charts) stack.append(chartNode(chart));
+    if (report.events.length) stack.append(eventsNode(report.events));
+    if (!report.metrics.length && !report.charts.length && !report.events.length) stack.append(el('div', 'empty', '没有可展示的数据。'));
+    stack.append(sourcesNode(report.sources));
+    root.append(stack);
+    if (report.notes.length) {
+      const notes = el('ul', 'notes');
+      for (const n of report.notes) notes.append(el('li', '', n));
+      root.append(notes);
+    }
+  }
+  function chartNode(chart) {
+    const box = el('section', 'chart'),
+      heading = el('div', 'row'),
+      title = el('h2', '', chart.title),
+      actions = el('div', 'actions'),
+      plot = el('button', 'selected', '图表'),
+      table = el('button', '', '数据');
+    plot.type = table.type = 'button';
+    plot.setAttribute('aria-pressed', 'true');
+    table.setAttribute('aria-pressed', 'false');
+    plot.setAttribute('aria-label', chart.title + ' 图表');
+    table.setAttribute('aria-label', chart.title + ' 数据');
+    actions.append(plot, table);
+    if (chart.unit) title.append(el('span', 'unit', chart.unit));
+    heading.append(title, actions);
+    box.append(heading, sourceRef(chart.source_ids));
+    const legend = el('div', 'legend'),
+      area = el('div', 'chart-area'),
+      detail = el('div', 'point-detail', '选择数据点查看精确值'),
+      enabled = new Set(chart.series.map((_, i) => i));
+    function draw() {
+      area.replaceChildren();
+      if (chart.kind === 'bar') drawBars(area, chart, enabled, detail);else drawLine(area, chart, enabled, detail);
+    }
+    chart.series.forEach((s, i) => {
+      const b = el('button', 'series-button', s.name),
+        dot = el('span', 'dot');
+      dot.style.setProperty('--dot', colors[i % colors.length]);
+      b.prepend(dot);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', 'true');
+      b.addEventListener('click', () => {
+        if (enabled.has(i)) enabled.delete(i);else enabled.add(i);
+        b.setAttribute('aria-pressed', String(enabled.has(i)));
+        draw();
+      });
+      legend.append(b);
+    });
+    box.append(legend, area, detail);
+    function setMode(showTable) {
+      plot.classList.toggle('selected', !showTable);
+      table.classList.toggle('selected', showTable);
+      plot.setAttribute('aria-pressed', String(!showTable));
+      table.setAttribute('aria-pressed', String(showTable));
+      legend.hidden = showTable;
+      detail.hidden = showTable;
+      if (showTable) drawTable(area, chart);else draw();
+    }
+    plot.addEventListener('click', () => setMode(false));
+    table.addEventListener('click', () => setMode(true));
+    draw();
+    return box;
+  }
+  function drawTable(area, chart) {
+    area.replaceChildren();
+    const wrap = el('div', 'table-wrap'),
+      table = el('table'),
+      head = el('thead'),
+      tr = el('tr');
+    for (const x of [chart.x_label || '时间 / 类别', '系列', '值' + (chart.unit ? ' (' + chart.unit + ')' : '')]) tr.append(el('th', '', x));
+    head.append(tr);
+    table.append(head);
+    const body = el('tbody');
+    for (const s of chart.series) for (const p of s.points) {
+      const row = el('tr');
+      row.append(el('td', '', p.x), el('td', '', s.name), el('td', '', fmt(p.y)));
+      body.append(row);
+    }
+    table.append(body);
+    wrap.append(table);
+    area.append(wrap);
+  }
+  function drawBars(area, chart, enabled, detail) {
+    const data = [];
+    chart.series.forEach((s, i) => {
+      if (enabled.has(i)) for (const p of s.points) data.push({
+        s,
+        p,
+        i
+      });
+    });
+    if (!data.length) {
+      area.append(el('div', 'empty', '没有选中的数据。'));
+      return;
+    }
+    const nums = data.filter(x => x.p.y !== null).map(x => x.p.y),
+      min = Math.min(0, ...nums),
+      max = Math.max(0, ...nums),
+      span = max - min || 1,
+      zero = (0 - min) / span * 100,
+      rows = el('div', 'bars');
+    for (const {
+      s,
+      p,
+      i
+    } of data) {
+      const row = el('div', 'bar-row'),
+        label = el('div', 'bar-label', chart.series.length > 1 ? `${p.x} · ${s.name}` : p.x),
+        track = el('div', 'bar-track'),
+        baseline = el('span', 'bar-zero'),
+        value = el('div', 'bar-value', fmt(p.y));
+      baseline.style.left = zero + '%';
+      track.append(baseline);
+      if (p.y !== null) {
+        const fill = el('div', 'bar-fill');
+        fill.style.left = Math.min(zero, (p.y - min) / span * 100) + '%';
+        fill.style.width = Math.abs(p.y) / span * 100 + '%';
+        fill.style.setProperty('--bar', colors[i % colors.length]);
+        track.append(fill);
+      }
+      row.append(label, track, value);
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-label', `${p.x}, ${s.name}, ${fmt(p.y)} ${chart.unit}`);
+      const select = () => detail.textContent = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
+      row.addEventListener('click', select);
+      row.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          select();
+        }
+      });
+      rows.append(row);
+    }
+    area.append(rows);
+  }
+  function drawLine(area, chart, enabled, detail) {
+    const points = [];
+    chart.series.forEach((s, i) => {
+      if (enabled.has(i)) for (const p of s.points) points.push({
+        s,
+        p,
+        i,
+        t: ns(p.x)
+      });
+    });
+    const nums = points.filter(x => x.p.y !== null).map(x => x.p.y);
+    if (!points.length || !nums.length) {
+      area.append(el('div', 'empty', '没有可绘制的数据。'));
+      return;
+    }
+    const times = points.map(x => x.t),
+      tMin = times.reduce((a, b) => a < b ? a : b),
+      tMax = times.reduce((a, b) => a > b ? a : b),
+      yMin = Math.min(...nums),
+      yMax = Math.max(...nums),
+      ySpan = yMax - yMin || 1,
+      W = 600,
+      H = 220,
+      L = 48,
+      R = 14,
+      T = 14,
+      B = 27;
+    const x = t => tMax === tMin ? (L + W - R) / 2 : L + Number((t - tMin) * 1000000n / (tMax - tMin)) / 1000000 * (W - L - R),
+      y = v => yMax === yMin ? (T + H - B) / 2 : H - B - (v - yMin) / ySpan * (H - T - B);
+    const graph = svg('svg', {
+      viewBox: `0 0 ${W} ${H}`,
+      class: 'chart-svg',
+      role: 'group',
+      'aria-label': chart.title
+    });
+    for (let i = 0; i < 3; i++) {
+      if (yMax === yMin && i !== 1) continue;
+      const yy = T + (H - T - B) * i / 2,
+        line = svg('line', {
+          x1: L,
+          y1: yy,
+          x2: W - R,
+          y2: yy,
+          class: 'gridline'
+        }),
+        label = svg('text', {
+          x: L - 6,
+          y: yy + 4,
+          'text-anchor': 'end',
+          class: 'axis-label'
+        });
+      label.textContent = fmt(yMax - (yMax - yMin) * i / 2);
+      graph.append(line, label);
+    }
+    chart.series.forEach((s, i) => {
+      if (!enabled.has(i)) return;
+      let d = '',
+        open = false;
+      const ordered = [...s.points].sort((a, b) => ns(a.x) < ns(b.x) ? -1 : ns(a.x) > ns(b.x) ? 1 : 0);
+      for (const p of ordered) {
+        if (p.y === null) {
+          open = false;
+          continue;
+        }
+        const xx = x(ns(p.x)),
+          yy = y(p.y);
+        d += (open ? ' L ' : ' M ') + xx + ' ' + yy;
+        open = true;
+      }
+      if (d) graph.append(svg('path', {
+        d,
+        class: 'line',
+        stroke: colors[i % colors.length]
+      }));
+      for (const p of s.points) {
+        if (p.y === null) continue;
+        const circle = svg('circle', {
+          cx: x(ns(p.x)),
+          cy: y(p.y),
+          r: 4,
+          fill: colors[i % colors.length],
+          class: 'point',
+          tabindex: 0,
+          role: 'button',
+          'data-x': p.x,
+          'data-value': p.y,
+          'aria-label': `${s.name}, ${p.x}, ${p.y} ${chart.unit}`
+        });
+        const select = () => detail.textContent = `${p.x} · ${s.name}: ${fmt(p.y)} ${chart.unit}`;
+        circle.addEventListener('click', select);
+        circle.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            select();
+          }
+        });
+        graph.append(circle);
+      }
+    });
+    area.append(graph);
+    const axis = el('div', 'row');
+    axis.style.cssText = 'font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums';
+    const first = points.find(p => p.t === tMin),
+      last = points.find(p => p.t === tMax);
+    const showFraction = first.p.x !== last.p.x && shortStamp(first.p.x) === shortStamp(last.p.x);
+    const start = el('span', '', shortStamp(first.p.x, showFraction));
+    const end = el('span', '', shortStamp(last.p.x, showFraction));
+    start.title = first.p.x;
+    end.title = last.p.x;
+    start.style.maxWidth = end.style.maxWidth = '48%';
+    end.style.textAlign = 'right';
+    axis.append(start, end);
+    area.append(axis);
+  }
+  function eventsNode(events) {
+    const box = el('section', 'events');
+    box.append(el('h2', '', '事件时间线'));
+    const list = el('ol', 'event-list');
+    const sorted = events.map((event, index) => ({
+      event,
+      index,
+      time: ns(event.timestamp)
+    })).sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : a.index - b.index);
+    for (const {
+      event: e
+    } of sorted) {
+      const item = el('li', 'event');
+      item.dataset.status = e.status || 'unknown';
+      item.append(el('div', 'event-time', stamp(e.timestamp)), el('div', 'event-title', e.label), el('div', 'event-context', [e.service, e.process].filter(Boolean).join(' · ')));
+      if (e.detail) item.append(el('div', 'event-detail', e.detail));
+      item.append(sourceRef(e.source_ids));
+      list.append(item);
+    }
+    box.append(list);
+    return box;
+  }
+  function sourcesNode(sources) {
+    const box = el('details', 'sources'),
+      summary = el('summary', '', `来源与范围 (${sources.length})`),
+      list = el('div', 'source-list');
+    for (const s of sources) {
+      const item = el('div', 'source'),
+        title = el('div', 'source-title', `${s.id} · ${s.tool}`),
+        meta = el('div', 'source-meta', [sourceLabel(s), s.start || '开始时间未知', s.end || '结束时间未知', {
+          complete: '完整',
+          partial: '不完整',
+          sample: '样本',
+          unknown: '覆盖范围未知'
+        }[s.coverage]].join(' · '));
+      item.dataset.sourceId = s.id;
+      item.append(title, meta);
+      if (s.note) item.append(el('div', 'source-note', s.note));
+      list.append(item);
+    }
+    box.append(summary, list);
+    return box;
+  }
+  function scheduleResize() {
+    if (resizePending) return;
+    resizePending = true;
+    requestAnimationFrame(() => {
+      resizePending = false;
+      if (initialized) send('ui/notifications/size-changed', {
+        height: Math.ceil(root.getBoundingClientRect().height),
+        width: document.documentElement.clientWidth
+      });
+    });
+  }
+  if (host === window) {
+    status('请在支持 MCP App 的宿主中打开此分析视图。');
+    return;
+  }
+  window.addEventListener('message', event => {
+    if (event.source !== host || !event.data || event.data.jsonrpc !== '2.0') return;
+    if (origin !== null && event.origin !== origin) return;
+    const m = event.data;
+    if (m.id === 1 && !initialized) {
+      if (!m.result || typeof m.result !== 'object') {
+        status('无法连接分析视图。', true);
+        return;
+      }
+      origin = event.origin;
+      initialized = true;
+      theme(m.result.hostContext);
+      send('ui/notifications/initialized');
+      if (early && early.origin === origin) receive(early.params);
+      early = null;
+      scheduleResize();
+    } else if (m.method === 'ui/notifications/tool-result') {
+      if (!initialized) early = {
+        origin: event.origin,
+        params: m.params
+      };else receive(m.params);
+    } else if (initialized && m.method === 'ui/notifications/host-context-changed') theme(m.params);else if (initialized && m.method === 'ui/notifications/tool-cancelled') status('分析视图已取消。', true);
+  });
+  host.postMessage({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'ui/initialize',
+    params: {
+      appInfo: {
+        name: 'DerbySoft Log Analysis',
+        version: '0.7.0'
+      },
+      appCapabilities: {},
+      protocolVersion: '2026-01-26'
+    }
+  }, '*');
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(scheduleResize).observe(root);
+})();
+</script></body></html>

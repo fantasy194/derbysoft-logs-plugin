@@ -329,6 +329,7 @@ try {
   assert.equal(await earlyFrame.getByRole('button',{name:'保存更改'}).isDisabled(),true)
   await earlyFrame.getByRole('button',{name:'刷新'}).click()
   await earlyFrame.getByLabel('编辑环境').waitFor()
+  await earlyFrame.getByLabel('编辑环境').locator('option[value="uat"]').waitFor({state:'detached'})
   assert.equal(await earlyFrame.getByLabel('编辑环境').inputValue(),'prod')
   assert.equal(await earlyFrame.getByLabel('默认业务索引').inputValue(),'retained-after-refresh-*')
   assert.equal((await page.evaluate(()=>window.calls)).filter(call=>call.name==='delete_environment').length,1)

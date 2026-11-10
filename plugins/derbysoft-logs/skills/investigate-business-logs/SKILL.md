@@ -41,4 +41,12 @@ If a tool is unavailable or access is denied, report the limitation and useful n
 
 If metadata discovery is denied but the user or prior verified results provide an exact index and known fields, a narrowly scoped `SearchIndexTool` request can still work. State that mapping could not be verified; do not invent a `.keyword` suffix or infer no access from a denied root probe. A 200 response with zero queried shards does not establish a real index exists.
 
+## Present the analysis
+
+Choose the presentation from the question: use an interactive trend for change over time, bars for process/service comparisons, and an event timeline for a request chain. In a host that can display MCP Apps, prefer `render_log_analysis` for these results instead of defaulting to a long Markdown table; do not wait for the user to explicitly ask for a chart. Keep a short written finding and the material uncertainty alongside the visual. A single fact or a few exact values can stay in prose or a small table. Honor an explicit format request.
+
+Keep data collection separate from rendering. Read and check the existing query tools' `structuredContent`, select or aggregate the relevant data, then call `render_log_analysis` with the final evidence-backed report. Read [visual analysis](references/visual-analysis.md) when preparing it. The renderer does not fetch logs, verify business conclusions or calculate missing totals. Preserve each source's environment, actual scope, time window, units and completeness. Never turn sampled hits into population counts, unknown values into zero, or a failed query into an empty successful chart.
+
+Use the available host capability, not its product name: a native chart tool may be suitable when it can preserve the same evidence and scope; otherwise use the plugin renderer in an MCP Apps host. If neither can render, provide concise text and a compact table with the same caveats. Do not claim a chart was shown just because the tool returned successfully, repeatedly retry rendering in an unsupported host, or generate client scripts/temporary HTML for ordinary investigations. Avoid repeating the entire chart as a Markdown table in the final answer; exact values and sources are available inside the view.
+
 For StreamLog evidence, inspect `unverified_records`, `mismatched_records`, `verification.trace_token`, `verification.timestamp`, and `details_incomplete`. Only `match` confirms a checked field; `not_available` is unverified, and mismatched payloads are withheld. Page size is 10–100 (default 100).

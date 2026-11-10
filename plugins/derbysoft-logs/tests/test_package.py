@@ -11,8 +11,9 @@ def test_manifest_references_and_stdio_launchers():
     assert (ROOT / plugin["skills"]).is_dir()
     assert (ROOT / plugin["extensions"]["com.openai"]["onboardingSkill"]).is_file()
     config = json.loads((ROOT / plugin["mcpServers"]).read_text(encoding="utf-8"))
-    assert set(config["mcpServers"]) == {"opensearch", "streamlog", "loki", "settings", "semantics"}
+    assert set(config["mcpServers"]) == {"opensearch", "streamlog", "loki", "settings", "semantics", "analysis"}
     assert config["mcpServers"]["semantics"]["env_vars"] == ["DERBYSOFT_LOGS_HOME"]
+    assert not config["mcpServers"]["analysis"].get("env_vars")
     for server in config["mcpServers"].values():
         assert server["command"] == "uv"
         assert server["cwd"] == "."

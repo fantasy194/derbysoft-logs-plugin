@@ -18,6 +18,7 @@
 | StreamLog 与 PerfLog 联查 | [stream.py](plugins/derbysoft-logs/src/derbysoft_logs/stream.py)、[server.py](plugins/derbysoft-logs/src/derbysoft_logs/server.py) |
 | Loki console 查询 | [loki.py](plugins/derbysoft-logs/src/derbysoft_logs/loki.py)、[loki_server.py](plugins/derbysoft-logs/src/derbysoft_logs/loki_server.py) |
 | 业务语义知识及本地 MCP | [semantics.py](plugins/derbysoft-logs/src/derbysoft_logs/semantics.py)、[semantics_server.py](plugins/derbysoft-logs/src/derbysoft_logs/semantics_server.py)、[learned-semantics.md](plugins/derbysoft-logs/skills/investigate-business-logs/references/learned-semantics.md) |
+| 分析报告合同与交互图表 | [analysis.py](plugins/derbysoft-logs/src/derbysoft_logs/analysis.py)、[analysis_server.py](plugins/derbysoft-logs/src/derbysoft_logs/analysis_server.py)、[analysis.html](plugins/derbysoft-logs/src/derbysoft_logs/assets/analysis.html) |
 
 ## 业务语义与查询范围
 
@@ -56,6 +57,8 @@
 - 保持官方 `opensearch-mcp-server-py` 依赖和只读工具白名单，隔离每次所选环境的子进程凭证，不改共享 `os.environ` 来切换并发查询目标。
 - MCP 在未配置凭证时仍应启动并提供工具发现。Structured Settings 同时验证 legacy `initialize` 与新版 `server/discover` 能力声明；SDK 私有接口适配依赖版本锁定，升级须检查实际 stdio 协议。
 - 工具成功应返回可直接使用的结构化数据；错误与日志不输出秘密。MCP App 只接受宿主来源且形状正确的消息，兼容工具结果早于设置加载到达。
+- 查询与展示分离：日志数据工具保持 `structuredContent` 且不附图表资源；仅分析 Render Tool 关联 UI。模型先核实数据与业务语义，再组织有来源的图表；渲染器不重新查询、推断总量或持久化报告。宿主是否支持交互视图按实际能力判断，不按 Codex 产品名猜测。
+- 图表保留环境、时间窗、单位、来源和完整性；缺失值不变成零，样本不当总体，时间线不把时间相邻当因果。图表数值、明细表和来源必须一致；浏览器测试包含浅深色、窄屏、键盘、错误结果和有缺失值的数据。
 - 删除、凭证、安全边界和跨环境路由要有有意义的失败测试。普通文案调整无需新增与实现逐行对应的测试。
 
 从仓库根目录运行基础检查：
@@ -69,6 +72,7 @@ uv run --frozen --project plugins/derbysoft-logs python -I plugins/derbysoft-log
 
 - Python 使用 `-I` 避免本机 `PYTHONPATH` 污染。Windows 执行读取中文文档的 Python 辅助脚本时可加 `-X utf8`，不要把默认 GBK 解码失败误判为文件损坏。
 - 修改 HTML 或宿主桥接时，运行 [浏览器 smoke](plugins/derbysoft-logs/tests/test_settings_ui.mjs)：`node plugins/derbysoft-logs/tests/test_settings_ui.mjs`。需要可用的 Playwright/Chromium；可通过 `PLAYWRIGHT_MODULE`、`CHROME_PATH` 指定本机安装，`UI_SCREENSHOT_DIR` 可输出截图。不要提交个人绝对路径。
+- 分析界面运行 `node plugins/derbysoft-logs/tests/test_analysis_ui.mjs`；合成宿主的浏览器截图和真实 MCP stdio 证据分别记录，不能冒充真实 Codex 宿主验收。
 - 同时检查浅色、深色、窄屏、真实 schema、未保存状态和失败恢复。模拟宿主、真实 stdio、当前 Codex UI、真实公司服务分别记录，不能互相替代。现有 CI 跑 Windows/Ubuntu 的 Python、Ruff 与 ZIP 构建，不包含浏览器测试。
 - 测试使用临时 `DERBYSOFT_LOGS_HOME`、模拟凭证库和模拟网络；自动化安装验证使用隔离 `CODEX_HOME`。真实服务联调只做已授权、限定环境与范围的只读请求，不保留真实业务报文。
 
