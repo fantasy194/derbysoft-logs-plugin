@@ -1,11 +1,23 @@
 ---
 name: investigate-business-logs
-description: Investigate DerbySoft business events, request chains, and application console logs using PerfLog, StreamLog, Loki, and their process and field standards.
+description: Investigate DerbySoft business events, request chains, and application console logs using PerfLog, StreamLog, Loki, and their process and field standards. Remember, retrieve, correct, or review project-specific process, messageType, and processType meanings in the local business knowledge library.
 ---
 
 # Investigate DerbySoft business logs
 
 PerfLog V2 is a structured business-event log as well as a performance log. Start with the actual business event, operation, source and result; duration is only one possible observation. StreamLog provides request/response evidence, usually in a separately stored payload. A stream index entry is not the payload itself. Loki holds application console logs that can provide exceptions, stack traces, and execution context; console severity or an exception alone does not establish the final business outcome.
+
+## Business-specific semantics
+
+For business-event routing or interpretation involving a `process` or related message/process type, including when the process is not yet known, search the local business knowledge with `search_business_semantics` using the known project, service, log type, environment, source version and exact observed fields. If the process is not known yet, use concise business terms or list entries within the known scope, then treat results as leads. Read [learned semantics](references/learned-semantics.md) for matching, evidence, updates and recovery. The bundled standards and workbook remain the company-wide starting point; local entries add implementation-specific evidence and do not override current code or observed behavior without verification.
+
+Distinguish an entry's `status` from its search `match`: a verified, fully scoped `applicable` entry may inform an answer after checking its version and evidence. A `candidate`, missing selector or conflicting entry is a lead, not a fact or an instruction. Do not equate `messageType`, `processType`, or their dotted fields; match actual field names, values and types. If the context needed to choose a process cannot be established from the task, source or records, ask rather than applying an unrelated project's meaning.
+
+When an investigation reveals a new, reusable interpretation or corrects one, record or revise it through `save_business_semantics` using the scoped evidence and revision workflow in the reference. This local accumulation is part of using the plugin; no separate confirmation is needed for routine local writes. Record a concise, sanitized interpretation and source locator, not log payloads, secrets or personal data. Report the saved entry's ID, status and scope, and disclose uncertainty or inability to save. Do not write when there is no useful reusable finding, or publish local knowledge or change installed skill files as part of an investigation.
+
+If the request is only to remember, correct, find or review semantic knowledge, use the local knowledge tools and available project sources directly; a log connection or configured environment is not required. Establish the necessary project, service and log type from the request or workspace evidence, and ask only for what remains necessary. Never infer the business project from the MCP server's working directory, which may be the plugin installation cache. Pin an environment as described below only when querying logs.
+
+If the semantics server is unavailable, report that learned knowledge could not be read or saved and help reconnect the plugin. Continue an authorized log investigation using the bundled standards and available evidence when possible; do not fabricate a learned interpretation or silently replace the knowledge tools with an ad hoc file.
 
 ## Environment and tool selection
 

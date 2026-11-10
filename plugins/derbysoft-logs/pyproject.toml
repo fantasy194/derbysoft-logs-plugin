@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "derbysoft-logs"
-version = "0.5.0"
+version = "0.6.0"
 description = "DerbySoft business log investigation tools for Codex"
 requires-python = ">=3.11"
 dependencies = [
@@ -20,6 +20,7 @@ derbysoft-logs = "derbysoft_logs.cli:main"
 derbysoft-streamlog = "derbysoft_logs.server:main"
 derbysoft-loki = "derbysoft_logs.loki_server:main"
 derbysoft-log-settings = "derbysoft_logs.settings_server:main"
+derbysoft-business-semantics = "derbysoft_logs.semantics_server:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1"]

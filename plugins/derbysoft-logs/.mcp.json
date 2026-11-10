@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "semantics": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--project", ".", "python", "-I", "-m", "derbysoft_logs.semantics_server"],
+      "cwd": ".",
+      "env_vars": ["DERBYSOFT_LOGS_HOME"],
+      "startup_timeout_sec": 120,
+      "tool_timeout_sec": 120
+    },
     "settings": {
       "command": "uv",
       "args": ["run", "--frozen", "--project", ".", "python", "-I", "-m", "derbysoft_logs.settings_server"],

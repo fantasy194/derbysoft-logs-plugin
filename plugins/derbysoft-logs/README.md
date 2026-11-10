@@ -6,7 +6,7 @@
 
 需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
 
-推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.5.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.6.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
 
 CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
 
@@ -34,6 +34,22 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 
 每个环境有自己的 OpenSearch **默认索引**，例如 `derbysoft-exchange-*`。显式传入的索引优先；未指定时使用该环境的默认索引。都没有时提示配置或提供索引，不会自动放宽到 `*`，查询失败后也不会默默切换索引或环境。返回值标明实际环境、索引和索引来源。默认索引是查询范围，不证明其中每条记录都属于同一日志类型；仍需根据 mapping、实际 `type` 和业务字段选择数据。
 
+## 业务语义的积累
+
+插件自带的业务标准和工作表提供通用定义；实际调查中，同名 `process` 在不同项目、服务、`messageType` 或 `processType` 下可能有不同含义。调查 skill 会先检索已有语义，再结合当前代码、字段和日志核实；发现新的、可复用的含义或纠正已有认识时，会将精简解释与证据记录到本机知识库，供后续调查使用。常规积累不需要每次重新确认，记录后会告知条目、状态和范围。
+
+每条语义绑定项目、服务、日志类型和实际的 `process` 等字段，可进一步限定环境和源码版本。字段名及值按实际类型区分，不把 `messageType` 与 `processType` 自动视为同一字段。只有日志观察的结论保留为 **candidate（候选）**；源码、文档或用户确认能够支持时才可记为 **verified（已验证）**。环境或版本未限定并不证明该结论适用于所有环境和版本。出现缺失上下文、过时证据或冲突时，skill 会继续核查或说明不确定性。
+
+知识默认保存在 `~/.derbysoft-logs/knowledge/business-semantics/`。首次记录后，其中的 `business-semantics.md` 自动生成总览，可浏览当前语义并打开对应条目；每个条目的修订另存为 Markdown，更新或废弃会保留历史，可以查看旧版本并将其恢复为新修订。总览是根据条目生成的视图，通过工具修改语义，避免直接编辑总览或历史文件。插件升级不会替换这些文件；`DERBYSOFT_LOGS_HOME` 会改变其父目录。此知识库默认是本地的，不随插件安装包分发，也不会自动共享给同事；不要把凭证、原始报文或客户个人信息写进去。日志查询仍使用原有只读范围。
+
+如果提示条目已保存但总览更新失败，无需重复保存；可让插件在排除错误后调用 `rebuild_business_semantics_overview` 重新生成总览。
+
+可以直接问：
+
+- “查这个业务应该用哪个 process 和 messageType？”
+- “记住这个服务中该 process 的业务含义，依据当前代码。”
+- “上次记的 processType 定义需要修正，查看之前的版本。”
+
 ## 查询工具
 
 | MCP | 工具 | 用途 |
@@ -43,6 +59,9 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 | OpenSearch | `batch_search` | 同一环境内执行最多 8 个具名查询，逐项返回结果或错误 |
 | StreamLog | `search_streamlog`, `get_streamlog_detail`, `correlate_perflog` | 按 client/token 查询索引、获取报文并联查 PerfLog |
 | Loki | `list_loki_labels`, `search_console_logs`, `query_loki` | 发现标签、按应用和条件查 console log，或执行 LogQL |
+| Semantics | `search_business_semantics`, `get_business_semantics` | 按业务与字段上下文检索本地语义，查看证据和内容 |
+| Semantics | `save_business_semantics`, `list_business_semantics_history` | 在本机记录或修订语义，查看版本历史 |
+| Semantics | `rebuild_business_semantics_overview` | 从已保存修订重新生成可读 Markdown 总览 |
 | Settings | `open_log_settings` | 打开使用同一配置的 MCP App 备用界面 |
 
 OpenSearch 路由器在隔离的子进程中调用官方 MCP；普通查询、聚合和关联直接使用 MCP 工具，不需要临时客户端脚本或查询 JSON。`correlate_perflog` 接受从搜索结果 `result.hits.hits` 得到的记录；StreamLog client 必须来自用户明确提供的信息或实际记录，不能把 supplier 当作 client。`echo_token_channel` 和 `echo_token_derby` 不自动替代 `echo_token`。
