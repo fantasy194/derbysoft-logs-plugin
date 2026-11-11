@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "derbysoft-logs"
-version = "0.8.0"
+version = "0.9.0"
 description = "DerbySoft business log investigation tools for Codex"
 requires-python = ">=3.11"
 dependencies = [

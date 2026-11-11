@@ -1,6 +1,6 @@
 {
   "name": "derbysoft-logs",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "DerbySoft PerfLog, StreamLog and Loki investigation with interactive analysis views and evidence-backed project process knowledge.",
   "author": {"name": "DerbySoft"},
   "license": "Proprietary",

@@ -23,7 +23,7 @@
 ## 业务语义与查询范围
 
 - PerfLog 在实际使用中大量记录业务事件和结果，不能仅按性能指标解释。使用业务场景、服务和标准字段选择 `process`，再用实际记录核实；不同日志中的 process 不必相同。
-- PerfLog → StreamLog 的核心关联是 `echo_token` → `trace_token`。不要用 `echo_token_channel`、`echo_token_derby` 自动替代；StreamLog client 来自用户或实际记录，不从 supplier、索引名或其他字段猜测。详情仍需校验 token、时间和完整性。
+- PerfLog → StreamLog 的核心关联是 `echo_token` → `trace_token`。不要用 `echo_token_channel`、`echo_token_derby` 自动替代。StreamLog client 的优先级为显式参数、关联记录中的明确 client、所选环境 `streamlog.default_client`（普通搜索/详情没有关联记录层）；缺失时询问，不从 supplier、channel、topic、index 猜测。首次返回的实际 client 在后续分页/详情中显式固定。详情仍需校验 token、时间和完整性。
 - Loki 是应用 console 日志。普通文本中出现 token 或异常只是线索，不能单独证明订单、支付等业务结果。保留纳秒时间戳与相同时间戳的多条记录。
 - 用户明确指定的环境优先；否则使用已配置默认。没有默认、名称未知或上下文冲突时反问。一次调查在所有 OpenSearch、StreamLog、Loki 和详情调用中显式固定同一个环境，不因默认值变化而中途切换。
 - 每个环境独立设置默认 OpenSearch 索引。显式索引优先，其次使用所选环境默认索引；两者都缺失则要求配置。解析由服务端完成，返回实际 `environment`、`index`、`index_source`。错误后不得静默改查其他环境或扩大为 `*`。

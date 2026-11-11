@@ -72,7 +72,8 @@
         "DERBYSOFT_LOGS_HOME",
         "DERBYSOFT_LOGS_PROFILE",
         "STREAMLOG_URL",
-        "STREAMLOG_AUTHORIZATION"
+        "STREAMLOG_AUTHORIZATION",
+        "STREAMLOG_DEFAULT_CLIENT"
       ],
       "startup_timeout_sec": 120,
       "tool_timeout_sec": 120

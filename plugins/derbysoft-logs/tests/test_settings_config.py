@@ -6,7 +6,7 @@ import pytest
 from mcp import Client as MCPClient
 from mcp.server.mcpserver.exceptions import ToolError
 
-from derbysoft_logs import config, opensearch_server
+from derbysoft_logs import config, opensearch_server, settings
 
 
 @pytest.fixture
@@ -90,6 +90,23 @@ def test_credentials_save_preserves_identity_and_same_endpoint_default_index(iso
     view = config.public_environment_details()["environments"][0]
     assert (view["label"], view["kind"], view["services"]["opensearch"]["default_index"]) == ("测试环境", "uat", "uat-*")
     assert config.load_profile("uat")["opensearch"]["password"] == "s3cret"
+
+
+def test_stream_default_client_settings_preserve_existing_credential(isolated):
+    home, _ = isolated
+    config.save_profile(credentials("uat"), "uat")
+    config.save_profile(credentials("prod"), "prod")
+    uat_key = settings.environment_field("uat", "streamlog", "default_client")
+    prod_key = settings.environment_field("prod", "streamlog", "default_client")
+    before = json.loads((home / "uat.json").read_text(encoding="utf-8"))["streamlog"]["secret_id"]
+    result = settings.update({uat_key: "uat-client", prod_key: "prod-client"})
+    assert (result["values"][uat_key], result["values"][prod_key]) == ("uat-client", "prod-client")
+    assert config.load_profile("uat")["streamlog"]["authorization"] == "stream-secret"
+    assert json.loads((home / "uat.json").read_text(encoding="utf-8"))["streamlog"]["secret_id"] == before
+    cleared = settings.update({uat_key: ""})
+    assert (cleared["values"][uat_key], cleared["values"][prod_key]) == ("", "prod-client")
+    assert config.load_profile("uat")["streamlog"]["authorization"] == "stream-secret"
+    assert json.loads((home / "uat.json").read_text(encoding="utf-8"))["streamlog"]["secret_id"] == before
 
 
 def test_effective_and_persisted_default_are_explicit(isolated, monkeypatch):

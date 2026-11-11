@@ -1,5 +1,7 @@
 # StreamLog fields
 
+The viewer API's `client` is a routing value, not supplier/channel and not a value to derive from a log topic or index. `search_streamlog` and `get_streamlog_detail` use explicit `client`, then the selected environment's `streamlog.default_client`. `correlate_perflog` uses explicit tool client, then each record's explicit client, then that environment's configured default. Missing all applicable sources requires user input; a missing client is not an empty successful lookup. Keep the returned resolved client pinned for pagination and details.
+
 The following field table and limits are transcribed from `docs/Stream Log Standard(JSON).md` in this project. Optional fields and enum values vary by deployed service; check observed records and mappings. The source has inconsistent transaction-type lists in the main table and limits table; do not assume either is exhaustive.
 
 ### Log Fields Standard

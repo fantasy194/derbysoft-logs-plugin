@@ -22,17 +22,19 @@ class ConfigurationError(ValueError):
 
 ENV_KEYS = {
     "opensearch": {"url": "OPENSEARCH_URL", "username": "OPENSEARCH_USERNAME", "password": "OPENSEARCH_PASSWORD"},
-    "streamlog": {"url": "STREAMLOG_URL", "authorization": "STREAMLOG_AUTHORIZATION"},
+    "streamlog": {"url": "STREAMLOG_URL", "authorization": "STREAMLOG_AUTHORIZATION",
+                  "default_client": "STREAMLOG_DEFAULT_CLIENT"},
     "loki": {"url": "LOKI_URL", "username": "LOKI_USERNAME", "password": "LOKI_PASSWORD",
              "auth_type": "LOKI_AUTH_TYPE", "tenant_id": "LOKI_TENANT_ID", "service_label": "LOKI_SERVICE_LABEL"},
 }
 SECRET_KEYS = {"opensearch": "password", "streamlog": "authorization", "loki": "password"}
 PUBLIC_FIELDS = {
     "opensearch": {"url", "username", "default_index"},
-    "streamlog": {"url"},
+    "streamlog": {"url", "default_client"},
     "loki": {"url", "username", "auth_type", "tenant_id", "service_label"},
 }
 KINDS = {"uat", "prod", "dev", "qa", "custom"}
+REQUIRED_FIELDS = {"opensearch": ("url", "username", "password"), "streamlog": ("url", "authorization")}
 _write_mutex = threading.RLock()
 _write_state = threading.local()
 
@@ -120,7 +122,7 @@ def _stored_environments() -> list[str]:
 
 
 def _has_environment_credentials() -> bool:
-    if any(all(os.environ.get(key, "").strip() for key in ENV_KEYS[section].values())
+    if any(all(os.environ.get(ENV_KEYS[section][key], "").strip() for key in REQUIRED_FIELDS[section])
            for section in ("opensearch", "streamlog")):
         return True
     if not os.environ.get("LOKI_URL", "").strip():
@@ -285,10 +287,12 @@ def require_section(profile: dict, section: str) -> dict:
     values = profile.get(section, {})
     if section == "loki":
         return _require_loki(values)
-    if not isinstance(values, dict) or any(not isinstance(values.get(k), str) or not values[k].strip() for k in ENV_KEYS[section]):
+    if not isinstance(values, dict) or any(not isinstance(values.get(k), str) or not values[k].strip() for k in REQUIRED_FIELDS[section]):
         raise ConfigurationError(f"{section} is not configured; run derbysoft-logs configure or supply its environment variables.")
     if section == "opensearch" and any(values[k] != values[k].strip() for k in ("username", "password")):
         raise ConfigurationError("OpenSearch MCP 0.12.0 trims credential boundaries; leading/trailing whitespace in username/password is unsupported.")
+    if section == "streamlog" and "default_client" in values:
+        values = {**values, "default_client": validate_stream_client(values["default_client"], allow_empty=True)}
     validate_url(values["url"])
     return values
 
@@ -373,6 +377,13 @@ def _save_profile(values: dict, name: str | None = None, *, merge: bool = False)
                 output[section]["default_index"] = validate_index(data["default_index"], allow_empty=True)
             elif old_index and old.get("url", "").rstrip("/") == output[section]["url"]:
                 output[section]["default_index"] = validate_index(old_index)
+        if section == "streamlog":
+            old = previous.get(section, {})
+            old_client = old.get("default_client") if isinstance(old, dict) else None
+            if "default_client" in data:
+                output[section]["default_client"] = validate_stream_client(data["default_client"], allow_empty=True)
+            elif old_client and old.get("url", "").rstrip("/") == output[section]["url"]:
+                output[section]["default_client"] = validate_stream_client(old_client)
         if section != "loki" or normalized["auth_type"] != "none":
             output[section]["credential_store"] = True
             output[section]["secret_id"] = f"{section}/{generation}"
@@ -413,6 +424,20 @@ def validate_index(value: str, *, allow_empty: bool = False) -> str:
     if (len(value) > 1024 or not re.fullmatch(r"[A-Za-z0-9_.?*,+\-]+", value)
             or any(not part or part in {".", ".."} for part in value.split(","))):
         raise ConfigurationError("Invalid OpenSearch index or index pattern.")
+    return value
+
+
+def validate_stream_client(value: str, *, allow_empty: bool = False) -> str:
+    """Validate a StreamIndex client identifier without treating it as a path."""
+    if not isinstance(value, str):
+        raise ConfigurationError("StreamLog client must be a string.")
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise ConfigurationError("StreamLog client must not contain control characters.")
+    value = value.strip()
+    if not value and allow_empty:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", value) or value in {".", ".."}:
+        raise ConfigurationError("Invalid StreamLog client: use 1–128 letters, digits, underscores, hyphens or dots.")
     return value
 
 
@@ -605,6 +630,8 @@ def _validate_public_field(section: str, key: str, value: str) -> str:
         return validate_url(value) if value else ""
     if key == "default_index":
         return validate_index(value, allow_empty=True)
+    if section == "streamlog" and key == "default_client":
+        return validate_stream_client(value, allow_empty=True)
     if section == "loki" and key == "auth_type" and value not in {"basic", "bearer", "none"}:
         raise ConfigurationError("Loki auth_type must be basic, bearer, or none.")
     if section == "loki" and key == "service_label" and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", value):
@@ -652,6 +679,8 @@ def _build_environment_patch(name: str, patch: dict) -> dict:
             saved.pop("secret_id", None)
         if section == "opensearch" and endpoint_changed and "default_index" not in validated:
             saved.pop("default_index", None)
+        if section == "streamlog" and endpoint_changed and "default_client" not in validated:
+            saved.pop("default_client", None)
         saved.update(validated)
         if section == "loki" and saved.get("auth_type", "basic") in {"bearer", "none"}:
             saved.pop("username", None)

@@ -13,6 +13,7 @@ from urllib.parse import quote, unquote, urlsplit
 
 import httpx
 
+from .config import ConfigurationError, validate_stream_client
 from .redaction import redact
 
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
@@ -191,7 +192,22 @@ class StreamLogClient:
     def __init__(self, config: dict[str, Any], transport: httpx.BaseTransport | None = None):
         self.url = _safe_base_url(config.get("url"))
         self.authorization = _required(config.get("authorization"), "streamlog.authorization", 4096)
+        self.default_client = self._validate_client(config.get("default_client", ""), allow_empty=True)
         self.transport = transport
+
+    @staticmethod
+    def _validate_client(value: Any, *, allow_empty: bool = False) -> str:
+        try:
+            return validate_stream_client(value, allow_empty=allow_empty)
+        except ConfigurationError as exc:
+            raise StreamLogError(str(exc)) from None
+
+    def _resolve_client(self, explicit: str | None) -> tuple[str, str]:
+        if explicit is not None:
+            return self._validate_client(explicit), "explicit"
+        if self.default_client:
+            return self.default_client, "default"
+        raise StreamLogError("StreamLog client is required; pass client or configure default_client for the selected environment.")
 
     def _post(self, operation: str, body: dict[str, Any]) -> dict[str, Any]:
         headers = {
@@ -234,9 +250,9 @@ class StreamLogClient:
             raise StreamLogError("StreamLog API returned an unexpected response; the expected list is missing")
         return result
 
-    def search(self, client: str, trace_token: str, start: str, end: str,
+    def search(self, client: str | None, trace_token: str, start: str, end: str,
                page: int = 1, page_size: int = 100) -> dict[str, Any]:
-        client = _required(client, "client")
+        client, client_source = self._resolve_client(client)
         trace_token = _required(trace_token, "trace_token")
         page = _bounded_int(page, "page", 1, 10_000)
         page_size = _bounded_int(page_size, "page_size", 10, 100)
@@ -267,7 +283,7 @@ class StreamLogClient:
             else:
                 matched.append(item)
         return {
-            "client": client, "trace_token": trace_token, "start": start, "end": end,
+            "client": client, "client_source": client_source, "trace_token": trace_token, "start": start, "end": end,
             "page": page, "page_size": page_size, "records": matched,
             "unverified_records": unverified, "mismatched_records": mismatched,
             "may_have_more": len(records) >= page_size,
@@ -275,9 +291,9 @@ class StreamLogClient:
                     "A full page may have more results; query the next page. Times are sent as exact UTC epoch milliseconds.",
         }
 
-    def detail(self, client: str, trace_token: str, s3_file_path: str,
+    def detail(self, client: str | None, trace_token: str, s3_file_path: str,
                offset: int | str, length: int | str, index_record: dict[str, Any] | None = None) -> dict[str, Any]:
-        client = _required(client, "client")
+        client, client_source = self._resolve_client(client)
         trace_token = _required(trace_token, "trace_token")
         s3_file_path = _required(s3_file_path, "s3_file_path", 4096)
         offset = _bounded_int(offset, "offset", 0, 2**63 - 1)
@@ -295,7 +311,7 @@ class StreamLogClient:
         if any(not isinstance(record, dict) for record in records):
             raise StreamLogError("StreamLog detail returned an unexpected record format")
         return {
-            "client": client, "trace_token": trace_token, "s3_file_path": s3_file_path,
+            "client": client, "client_source": client_source, "trace_token": trace_token, "s3_file_path": s3_file_path,
             "offset": offset, "length": length,
             "records": [_detail_record(record, trace_token, index_record) for record in records],
             "note": "Only verification=match confirms a field; not_available means it was not checked. "
@@ -309,7 +325,7 @@ class StreamLogClient:
         # Validate the entire request before making any network calls.
         if _time_ms(end, "end") <= _time_ms(start, "start"):
             raise StreamLogError("end must be later than start")
-        fixed_client = _required(client, "client") if client is not None else None
+        fixed_client = self._validate_client(client) if client is not None else None
         groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
         skipped = []
         for number, record in enumerate(perflog_records):
@@ -319,24 +335,33 @@ class StreamLogClient:
             if not isinstance(source, dict):
                 raise StreamLogError("each perflog _source must be an object")
             token = source.get("echo_token")
-            source_client = fixed_client or source.get("client")
+            record_client = source.get("client")
+            if fixed_client is not None:
+                source_client, client_source = fixed_client, "explicit"
+            elif record_client is not None and record_client != "":
+                source_client, client_source = self._validate_client(record_client), "record"
+            else:
+                source_client, client_source = self.default_client, "default"
             if not token or not source_client:
-                skipped.append({"record_index": number, "reason": "missing echo_token or explicit client"})
+                skipped.append({"record_index": number, "reason": "missing echo_token or StreamLog client; provide client or configure default_client for the selected environment"})
                 continue
             token = _required(token, "echo_token")
-            source_client = _required(source_client, "client")
             groups.setdefault((source_client, token), []).append({
                 "record_index": number, "_index": record.get("_index"), "_id": record.get("_id"),
+                "client_source": client_source,
             })
         if len(groups) > MAX_JOIN_KEYS:
             raise StreamLogError(f"At most {MAX_JOIN_KEYS} distinct client/echo_token pairs are allowed")
         matches = []
         remaining_details = MAX_JOIN_DETAILS
         for (stream_client, token), refs in groups.items():
+            source_values = {ref["client_source"] for ref in refs}
+            client_source = next(iter(source_values)) if len(source_values) == 1 else "mixed"
             joined: dict[str, Any] = {"client": stream_client, "echo_token": token, "trace_token": token,
-                                      "perflog_refs": refs}
+                                      "client_source": client_source, "perflog_refs": refs}
             try:
                 result = self.search(stream_client, token, start, end)
+                result["client_source"] = client_source
                 joined["stream_index"] = result
                 if include_details:
                     details = []
@@ -355,8 +380,10 @@ class StreamLogClient:
                             continue
                         remaining_details -= 1
                         try:
-                            details.append(self.detail(stream_client, token, row["s3_file_path"],
-                                                       row["offset"], row["length"], row))
+                            detail = self.detail(stream_client, token, row["s3_file_path"],
+                                                 row["offset"], row["length"], row)
+                            detail["client_source"] = client_source
+                            details.append(detail)
                         except StreamLogError as exc:
                             details.append({"error": str(exc), "index_timestamp": row.get("@timestamp")})
                     for row in result["unverified_records"]:
@@ -377,4 +404,4 @@ class StreamLogClient:
             matches.append(joined)
         return {"matches": matches, "skipped": skipped, "details_requested": include_details,
                 "detail_limit": MAX_JOIN_DETAILS if include_details else 0,
-                "note": "Correlation uses PerfLog echo_token = StreamLog trace_token, scoped by explicit client and time; absence is not proof of no log."}
+                "note": "Correlation uses PerfLog echo_token = StreamLog trace_token, scoped by the resolved client and time; absence is not proof of no log."}

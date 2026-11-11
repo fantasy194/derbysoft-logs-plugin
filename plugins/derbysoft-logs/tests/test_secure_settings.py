@@ -58,6 +58,7 @@ def test_encrypted_transaction_updates_multiple_environments_and_consumes_sessio
         settings.environment_field("uat", "opensearch", "url"): "https://new-uat.example.test",
         settings.environment_field("uat", "opensearch", "default_index"): "derbysoft-exchange-*",
         settings.environment_field("prod", "streamlog", "url"): "https://prod-stream.example.test",
+        settings.environment_field("prod", "streamlog", "default_client"): "prod-client",
         "default_environment": "prod", "new_environment_id": "qa",
     }, "secrets": {"uat": {"opensearch": 'new-$"uat`!'}, "prod": {"streamlog": "prod-auth!"}}})
     result = secure_settings.save_settings_secure(**req)
@@ -65,6 +66,7 @@ def test_encrypted_transaction_updates_multiple_environments_and_consumes_sessio
     assert result["values"]["new_environment_id"] == "qa"
     assert config.load_profile("uat")["opensearch"]["password"] == 'new-$"uat`!'
     assert config.load_profile("prod")["streamlog"]["authorization"] == "prod-auth!"
+    assert config.load_profile("prod")["streamlog"]["default_client"] == "prod-client"
     assert config.resolve_index("uat") == ("derbysoft-exchange-*", "default")
     for path in root.glob("*.json"):
         assert 'new-$"uat`!' not in path.read_text(encoding="utf-8")

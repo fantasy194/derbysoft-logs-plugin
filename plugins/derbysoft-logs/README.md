@@ -6,7 +6,7 @@
 
 需要 Codex、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和有权访问公司日志的网络。`uv.lock` 固定 Python 依赖，包括官方 `opensearch-mcp-server-py==0.12.0`；`uv` 管理兼容的 Python，首次同步需要包仓库访问。
 
-推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.8.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
+推荐在 Codex 桌面应用中打开 **Plugins → Add → Add a marketplace**，填写仓库 Git 地址 `https://github.com/fantasy194/derbysoft-logs-plugin.git`，或选择本地检出目录；再选择 **DerbySoft Logs 0.9.0** 安装。访问私有 Git 仓库需要先配置本机 Git 认证。新版本安装或刷新后如工具未出现，重新打开插件或启动新聊天；曾安装旧版 `derbysoft-logs-local` 的用户可以停用旧副本以避免工具重复。
 
 CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可执行 `codex plugin marketplace add https://github.com/fantasy194/derbysoft-logs-plugin.git`，再执行 `codex plugin add derbysoft-logs@derbysoft-logs`；Git 来源更新可用 `codex plugin marketplace upgrade derbysoft-logs`。本地检出也可在仓库根目录运行 `scripts/install.ps1` 或 `scripts/install.sh`；脚本要求 `uv` 和可正常工作的 `codex` CLI，桌面安装不依赖这些脚本。
 
@@ -17,7 +17,7 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 备用页面的 **编辑环境** 仅选择当前显示的配置；**默认环境** 决定未指定环境的查询。切换编辑环境会保留未保存的输入，不会修改默认选择。
 
 1. 在 **新增环境** 填写一个 **环境名称**，例如 `uat` 或 `prod`，再点击 **创建环境**。此名称同时用于显示和查询，无需另设显示名称或类型。支持字母、数字、下划线和连字符；不能使用 `default`。
-2. 点击该环境的 **配置凭证**，在打开的配置页面按需填写 OpenSearch 地址、用户名、密码和默认索引；StreamLog 地址与 Authorization；以及 Loki 地址、用户名、认证类型、凭证、可选租户 ID 和服务标签。也可使用 `open_log_settings` 打开同一配置页面。各服务独立配置，只需填写实际使用的服务；服务地址需要使用 HTTPS。
+2. 点击该环境的 **配置凭证**，在打开的配置页面按需填写 OpenSearch 地址、用户名、密码和默认索引；StreamLog 地址、默认 client 与 Authorization；以及 Loki 地址、用户名、认证类型、凭证、可选租户 ID 和服务标签。也可使用 `open_log_settings` 打开同一配置页面。各服务独立配置，只需填写实际使用的服务；服务地址需要使用 HTTPS。
 3. 在同一页面保存该环境的连接设置和所填凭证。OpenSearch 使用用户名/密码，StreamLog 使用独立 Authorization，Loki 支持 Basic、Bearer 和无认证；Bearer token 填在 Loki 凭证栏。未填写新密码时保留既有凭证；若更改服务地址、用户名或认证方式，旧绑定将解除，可同时填写新凭证。
 4. 在顶部 **默认环境** 选择一个已有环境，或保留未设置。点击对应环境的 **测试连接**，在弹窗查看各服务的结果；再按需用已知索引、时间范围或 client 做受限的只读查询。
 
@@ -79,7 +79,11 @@ CLI 是可选方式：在支持插件命令且本机 CLI 配置正常时，可�
 | Semantics | `rebuild_business_semantics_overview` | 从已保存修订重新生成可读 Markdown 总览 |
 | Settings | `open_log_settings` | 打开使用同一配置的 MCP App 备用界面 |
 
-OpenSearch 路由器在隔离的子进程中调用官方 MCP；普通查询、聚合和关联直接使用 MCP 工具，不需要临时客户端脚本或查询 JSON。`correlate_perflog` 接受从搜索结果 `result.hits.hits` 得到的记录；StreamLog client 必须来自用户明确提供的信息或实际记录，不能把 supplier 当作 client。`echo_token_channel` 和 `echo_token_derby` 不自动替代 `echo_token`。
+OpenSearch 路由器在隔离的子进程中调用官方 MCP；普通查询、聚合和关联直接使用 MCP 工具，不需要临时客户端脚本或查询 JSON。`correlate_perflog` 接受从搜索结果 `result.hits.hits` 得到的记录。`echo_token_channel` 和 `echo_token_derby` 不自动替代 `echo_token`。
+
+StreamLog 的 **默认 client** 是每个环境单独保存的非敏感设置，Structured Settings 与备用配置页共享 `streamlog.default_client`。`search_streamlog` 和 `get_streamlog_detail` 的优先级是 **显式 client → 所选环境默认 client**；`correlate_perflog` 是 **显式参数 → 每条记录中明确的 client → 所选环境默认 client**。返回值保留实际 client 和来源，后续分页/详情应显式复用该值。未配置且未传入时明确要求 client，绝不从 supplier、channel、topic 或 index 猜测，也不借用另一环境的默认值。
+
+例如，服务负责人确认某个项目的 client 是 `exchange` 后，可分别在它使用的 UAT、PROD 环境中手动填写；插件不内置任何项目或全局 client 默认。清空字段会取消预配置，单独修改默认 client 不会清除凭证；修改 StreamLog 地址时清除未同时明确提供的默认 client，避免把旧路由带到新服务。仅由环境变量构成的配置可使用 `STREAMLOG_DEFAULT_CLIENT`，它不会覆盖已有的具名环境文件。
 
 已有默认索引和已验证字段时直接查询，`ListIndexTool` / `IndexMappingTool` 不是前置步骤。对明确的元数据权限 403，插件按环境身份、端点、账号、凭证版本、具体索引范围和操作记录 24 小时，后续调用可直接返回 `status=permission_denied`、`is_error=true`、`result=null` 和 `cached` 标记，避免重复请求。它不表示搜索被拒绝或索引不存在；环境列表可返回默认索引的本地拒绝提示，不会主动探测网络。
 

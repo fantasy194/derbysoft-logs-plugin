@@ -41,6 +41,7 @@ const hostHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Fixtur
       ['opensearch__username','OpenSearch 用户名','reader'],
       ['opensearch__default_index','OpenSearch 默认业务索引','logs-'+id+'-*'],
       ['streamlog__url','StreamLog 地址','https://stream.example.test'],
+      ['streamlog__default_client','StreamLog 默认 client',''],
       ['loki__url','Loki 地址','https://loki.example.test'],
       ['loki__username','Loki 用户名','reader'],['loki__auth_type','Loki 认证方式','basic'],
       ['loki__tenant_id','Loki 租户 ID',''],['loki__service_label','Loki 应用标签','app']];
@@ -437,5 +438,38 @@ try {
   await frame.getByText('已保存',{exact:true}).waitFor()
   assert.equal(decryptedSubmissions.at(-1).secrets.uat.opensearch,'new-password')
   assert.equal(JSON.stringify(await page.evaluate(()=>window.calls)).includes('new-password'),false)
-  console.log('MCP App UI passed: secure save, multi-environment editing, deletion and responsive layouts')
+  // Both environments get the shared StreamLog field; each draft and secret
+  // remains bound to its environment through switches and secure saves.
+  await page.setViewportSize({width:410,height:780})
+  await page.goto('http://localhost/')
+  await frame.getByLabel('编辑环境').waitFor()
+  await frame.locator('summary').filter({hasText:'StreamLog'}).click()
+  assert.equal(await frame.getByLabel('默认 client').inputValue(),'')
+  await frame.getByLabel('默认 client').fill('uat-client')
+  await frame.locator('#secret-uat-streamlog').fill('fixture-uat-auth')
+  await frame.getByLabel('编辑环境').selectOption('prod')
+  assert.equal(await frame.getByLabel('默认 client').inputValue(),'')
+  await frame.getByLabel('默认 client').fill('prod-client')
+  await frame.getByLabel('编辑环境').selectOption('uat')
+  assert.equal(await frame.getByLabel('默认 client').inputValue(),'uat-client')
+  assert.equal(await frame.locator('#secret-uat-streamlog').inputValue(),'fixture-uat-auth')
+  await frame.getByRole('button',{name:'保存更改'}).click()
+  await frame.getByText('已保存',{exact:true}).waitFor()
+  assert.deepEqual(decryptedSubmissions.at(-1),{set:{env__uat__streamlog__default_client:'uat-client',env__prod__streamlog__default_client:'prod-client'},secrets:{uat:{streamlog:'fixture-uat-auth'}}})
+  assert.equal(await frame.locator('#secret-uat-streamlog').getAttribute('placeholder'),'已保存，留空保持')
+  await frame.getByLabel('编辑环境').selectOption('prod')
+  assert.equal(await frame.getByLabel('默认 client').inputValue(),'prod-client')
+  await frame.getByLabel('默认 client').fill('')
+  await frame.getByRole('button',{name:'保存更改'}).click()
+  await frame.getByText('已保存',{exact:true}).waitFor()
+  assert.deepEqual(decryptedSubmissions.at(-1),{set:{env__prod__streamlog__default_client:''},secrets:{}})
+  await frame.getByLabel('编辑环境').selectOption('uat')
+  assert.equal(await frame.getByLabel('默认 client').inputValue(),'uat-client')
+  assert.equal(await frame.locator('#secret-uat-streamlog').getAttribute('placeholder'),'已保存，留空保持')
+  await frame.getByLabel('默认 client').evaluate(element=>element.scrollIntoView({block:'center'}))
+  if(process.env.UI_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.UI_SCREENSHOT_DIR,'settings-stream-default-client-410.png')})
+  await frame.locator('#field-env__uat__streamlog__url').fill('https://other.example.test')
+  await frame.getByText('更改地址后需重新输入已保存的凭证；未同时修改的默认 client 也会清除。').waitFor()
+  assert.equal(JSON.stringify(await page.evaluate(()=>window.calls)).includes('fixture-uat-auth'),false)
+  console.log('MCP App UI passed: secure save, per-environment default clients, deletion and responsive layouts')
 }finally{await browser.close()}

@@ -81,6 +81,33 @@ async def test_native_settings_creation_save_default_and_index(isolated, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_native_stream_client_is_per_environment_and_can_be_cleared(isolated):
+    config.create_environment("uat")
+    config.create_environment("prod")
+    async with Client(settings_server.mcp, read_timeout_seconds=10) as session:
+        initial = (await session.call_tool("settings_read", {})).structured_content
+        uat = field("uat", "streamlog", "default_client")
+        prod = field("prod", "streamlog", "default_client")
+        assert initial["values"][uat] == initial["values"][prod] == ""
+        assert initial["schema"]["properties"][uat]["title"] == "StreamLog 默认 client"
+        assert initial["schema"]["properties"][uat]["maxLength"] == 128
+        assert any(item.get("property") == uat for group in initial["layout"] for item in group["items"])
+        assert any(item.get("property") == prod for group in initial["layout"] for item in group["items"])
+        saved = await session.call_tool("settings_update", {"set": {
+            field("uat", "streamlog", "url"): "https://uat-stream.example.test",
+            uat: "uat-client",
+            field("prod", "streamlog", "url"): "https://prod-stream.example.test",
+            prod: "prod-client",
+        }})
+        assert not saved.is_error
+        values = saved.structured_content["values"]
+        assert (values[uat], values[prod]) == ("uat-client", "prod-client")
+        cleared = await session.call_tool("settings_update", {"set": {uat: ""}})
+        assert not cleared.is_error
+        assert (cleared.structured_content["values"][uat], cleared.structured_content["values"][prod]) == ("", "prod-client")
+
+
+@pytest.mark.asyncio
 async def test_env_actions_remain_bound_to_id_not_changing_default(isolated, monkeypatch):
     config.create_environment("uat", kind="uat")
     config.create_environment("prod", kind="prod")

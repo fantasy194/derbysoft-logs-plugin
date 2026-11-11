@@ -242,6 +242,14 @@ class StdioIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 search_tool = next(tool for tool in listed.tools if tool.name == "search_streamlog")
                 size_schema = search_tool.input_schema["properties"]["page_size"]
                 self.assertEqual((size_schema["minimum"], size_schema["maximum"]), (10, 100))
+                for tool in listed.tools:
+                    self.assertNotIn("client", tool.input_schema.get("required", []))
+                missing_client = await mcp_client.call_tool("search_streamlog", {
+                    "trace_token": "t", "start": "2026-10-30T00:00:00Z", "end": "2026-10-30T02:00:00Z",
+                    "environment": "uat"})
+                self.assertTrue(missing_client.is_error)
+                self.assertIn("client is required", str(missing_client.content))
+                self.assertNotIn("dummy-credential-for-stdio-test", str(missing_client.content))
                 result = await mcp_client.call_tool("correlate_perflog", {
                     "perflog_records": [], "start": "2026-10-30T00:00:00Z", "end": "2026-10-30T02:00:00Z",
                     "environment": "uat"})

@@ -75,6 +75,7 @@
   "tests/test_environments.py",
   "tests/test_package.py",
   "tests/test_stream.py",
+  "tests/test_stream_defaults.py",
   "tests/test_upstream.py",
   "tests/upstream_fixture.py",
   "uv.lock"

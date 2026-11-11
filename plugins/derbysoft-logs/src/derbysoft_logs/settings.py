@@ -19,7 +19,7 @@ _lock = RLock()
 SERVICE_FIELDS = {
     "opensearch": (("url", "OpenSearch 地址"), ("username", "OpenSearch 用户名"),
                    ("default_index", "OpenSearch 默认业务索引")),
-    "streamlog": (("url", "StreamLog 地址"),),
+    "streamlog": (("url", "StreamLog 地址"), ("default_client", "StreamLog 默认 client")),
     "loki": (("url", "Loki 地址"), ("username", "Loki 用户名"),
              ("auth_type", "Loki 认证方式"), ("tenant_id", "Loki 租户 ID"),
              ("service_label", "Loki 应用标签")),
@@ -93,12 +93,18 @@ def read() -> dict[str, Any]:
                         props[key]["enum"] = ["basic", "bearer", "none"]
                         props[key]["description"] = "更改认证方式会移除旧凭证。"
                     if field == "url":
-                        props[key]["description"] = ("更改地址会移除旧凭证和未同时修改的默认索引。"
-                                                     if service == "opensearch" else "更改地址会移除旧凭证。")
+                        props[key]["description"] = {
+                            "opensearch": "更改地址会移除旧凭证和未同时修改的默认索引。",
+                            "streamlog": "更改地址会移除旧凭证和未同时修改的默认 client。",
+                            "loki": "更改地址会移除旧凭证。",
+                        }[service]
                     if field == "username":
                         props[key]["description"] = "更改账号会移除旧凭证。"
                     if field == "default_index":
                         props[key]["description"] = "未显式指定索引时，仅使用此环境配置的索引模式。"
+                    if field == "default_client":
+                        props[key]["maxLength"] = 128
+                        props[key]["description"] = "未指定 client 时使用该环境的默认值；留空时需要提供 client。"
                     values[key] = env["services"][service].get(field, "")
                     items.append({"kind": "property", "property": key})
             def credential_status(service: str) -> str:

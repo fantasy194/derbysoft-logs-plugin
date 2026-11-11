@@ -294,6 +294,7 @@
       }
       control.id = id; control.name = key; control.autocomplete = "off";
       if (key === "new_environment_id") control.placeholder = "如 uat、prod";
+      if (key.endsWith("__streamlog__default_client")) control.placeholder = "选填";
       if (schema.type === "boolean") { control.checked = Boolean(draft[key]); wrapper.classList.add("check"); }
       else control.value = String(draft[key] ?? "");
       if ((state.schema.required || []).includes(key)) control.required = true;
@@ -301,6 +302,7 @@
       const changedConnection = () => {
         if (!String(baseline[key] || "") || Object.is(draft[key], baseline[key])) { warning.textContent = ""; return; }
         if (key.endsWith("__opensearch__url")) warning.textContent = "更改地址后需重新输入已保存的凭证；未同时修改的默认索引也会清除。";
+        else if (key.endsWith("__streamlog__url")) warning.textContent = "更改地址后需重新输入已保存的凭证；未同时修改的默认 client 也会清除。";
         else if (key.endsWith("__url") || key.endsWith("__username") || key.endsWith("__auth_type")) warning.textContent = "更改后需重新输入已保存的凭证。";
       };
       const update = () => {
@@ -705,7 +707,7 @@
     async function start() {
       if (host === window) { groupsNode.textContent = "请在支持 MCP Apps 的宿主中打开此配置页。"; footerStatus.textContent = "等待宿主"; return; }
       try {
-        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.8.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
+        const result = await request("ui/initialize", {appInfo:{name:"DerbySoft Logs Settings",version:"0.9.0"},appCapabilities:{},protocolVersion:"2026-01-26"});
         initialized = true; setTheme(result.hostContext); notify("ui/notifications/initialized");
         await readSettings(); flushUiAction();
       } catch (error) { groupsNode.textContent = "无法加载配置。"; footerStatus.textContent = "连接失败"; setNotice(describeError(error), true); }
